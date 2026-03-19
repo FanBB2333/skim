@@ -28,5 +28,24 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build output
+bin/
+dist/
+build/
+
+# Project specific
+.qoder/
+spec.md
+
+# Compiled binary (project name)
+/skim
