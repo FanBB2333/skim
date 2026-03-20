@@ -70,6 +70,22 @@ export namespace api {
 	        this.errors = source["errors"];
 	    }
 	}
+	export class SkillDetail {
+	    name: string;
+	    path: string;
+	    content: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SkillDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.content = source["content"];
+	    }
+	}
 	export class SkillInfo {
 	    name: string;
 	    description: string;

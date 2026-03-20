@@ -23,8 +23,14 @@ export function GetSkills():Promise<Array<api.SkillInfo>>;
 
 export function GetStatus():Promise<api.StatusResponse>;
 
+export function ReadSkillContent(arg1:string,arg2:string):Promise<api.SkillDetail>;
+
+export function ReadStoreSkillContent(arg1:string):Promise<api.SkillDetail>;
+
 export function RemoveEnv(arg1:string):Promise<api.OperationResult>;
 
 export function RemoveSkill(arg1:string):Promise<api.OperationResult>;
 
 export function ScanAgents():Promise<api.OperationResult>;
+
+export function WriteSkillContent(arg1:string,arg2:string,arg3:string):Promise<api.OperationResult>;

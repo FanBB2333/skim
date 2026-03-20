@@ -45,3 +45,9 @@ export interface SkillRef {
   Path: string;
   IsManaged: boolean;
 }
+
+export interface SkillDetail {
+  name: string;
+  path: string;
+  content: string;
+}

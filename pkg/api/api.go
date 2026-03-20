@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/FanBB2333/skim/internal/agent"
 	"github.com/FanBB2333/skim/internal/config"
@@ -282,3 +284,74 @@ func (a *App) GetAgentSkills(agentID string) ([]model.SkillRef, error) {
 
 // Ensure agent interface is available for type assertions
 var _ agent.Agent = (*agent.StandardAgent)(nil)
+
+// SkillDetail holds the full content for a skill file.
+type SkillDetail struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
+// ReadSkillContent reads the SKILL.md (or GEMINI.md) content for a skill in a specific agent.
+func (a *App) ReadSkillContent(agentID, skillName string) (*SkillDetail, error) {
+	ag := a.svc.Registry.Get(agentID)
+	if ag == nil {
+		return nil, fmt.Errorf("agent %q not found", agentID)
+	}
+
+	var skillPath string
+	if agentID == "gemini" {
+		skillPath = filepath.Join(ag.SkillDir(), "GEMINI.md")
+	} else {
+		skillPath = filepath.Join(ag.SkillDir(), skillName, "SKILL.md")
+	}
+
+	data, err := os.ReadFile(skillPath)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", skillPath, err)
+	}
+
+	return &SkillDetail{
+		Name:    skillName,
+		Path:    skillPath,
+		Content: string(data),
+	}, nil
+}
+
+// WriteSkillContent writes content back to a skill file in a specific agent.
+func (a *App) WriteSkillContent(agentID, skillName, content string) *OperationResult {
+	ag := a.svc.Registry.Get(agentID)
+	if ag == nil {
+		return &OperationResult{Success: false, Message: fmt.Sprintf("agent %q not found", agentID)}
+	}
+
+	var skillPath string
+	if agentID == "gemini" {
+		skillPath = filepath.Join(ag.SkillDir(), "GEMINI.md")
+	} else {
+		skillPath = filepath.Join(ag.SkillDir(), skillName, "SKILL.md")
+	}
+
+	if err := os.WriteFile(skillPath, []byte(content), 0o644); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	return &OperationResult{Success: true, Message: fmt.Sprintf("Saved %s", skillPath)}
+}
+
+// ReadStoreSkillContent reads the SKILL.md content from the global store.
+func (a *App) ReadStoreSkillContent(skillName string) (*SkillDetail, error) {
+	skill, err := a.svc.Store.Get(skillName)
+	if err != nil {
+		return nil, err
+	}
+	skillPath := filepath.Join(skill.StorePath, "SKILL.md")
+	data, err := os.ReadFile(skillPath)
+	if err != nil {
+		return nil, err
+	}
+	return &SkillDetail{
+		Name:    skillName,
+		Path:    skillPath,
+		Content: string(data),
+	}, nil
+}

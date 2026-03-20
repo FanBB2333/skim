@@ -42,6 +42,14 @@ export function GetStatus() {
   return window['go']['api']['App']['GetStatus']();
 }
 
+export function ReadSkillContent(arg1, arg2) {
+  return window['go']['api']['App']['ReadSkillContent'](arg1, arg2);
+}
+
+export function ReadStoreSkillContent(arg1) {
+  return window['go']['api']['App']['ReadStoreSkillContent'](arg1);
+}
+
 export function RemoveEnv(arg1) {
   return window['go']['api']['App']['RemoveEnv'](arg1);
 }
@@ -52,4 +60,8 @@ export function RemoveSkill(arg1) {
 
 export function ScanAgents() {
   return window['go']['api']['App']['ScanAgents']();
+}
+
+export function WriteSkillContent(arg1, arg2, arg3) {
+  return window['go']['api']['App']['WriteSkillContent'](arg1, arg2, arg3);
 }
