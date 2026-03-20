@@ -1,4 +1,4 @@
-import type { StatusResponse, SkillInfo, EnvInfo, AgentInfo, OperationResult, SkillRef } from './types';
+import type { StatusResponse, SkillInfo, EnvInfo, AgentInfo, OperationResult, SkillRef, SkillDetail } from './types';
 
 declare global {
   interface Window {
@@ -18,6 +18,9 @@ declare global {
           ScanAgents: () => Promise<OperationResult>;
           RemoveSkill: (name: string) => Promise<OperationResult>;
           GetAgentSkills: (agentID: string) => Promise<SkillRef[]>;
+          ReadSkillContent: (agentID: string, skillName: string) => Promise<SkillDetail>;
+          WriteSkillContent: (agentID: string, skillName: string, content: string) => Promise<OperationResult>;
+          ReadStoreSkillContent: (skillName: string) => Promise<SkillDetail>;
         };
       };
     };
@@ -38,4 +41,7 @@ export const api = {
   scanAgents: () => window.go.api.App.ScanAgents(),
   removeSkill: (name: string) => window.go.api.App.RemoveSkill(name),
   getAgentSkills: (agentID: string) => window.go.api.App.GetAgentSkills(agentID),
+  readSkillContent: (agentID: string, skillName: string) => window.go.api.App.ReadSkillContent(agentID, skillName),
+  writeSkillContent: (agentID: string, skillName: string, content: string) => window.go.api.App.WriteSkillContent(agentID, skillName, content),
+  readStoreSkillContent: (skillName: string) => window.go.api.App.ReadStoreSkillContent(skillName),
 };
