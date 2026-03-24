@@ -1623,6 +1623,34 @@ body {
   color: var(--accent-active);
 }
 
+/* Skill origin badges */
+.badge-managed {
+  background: rgba(91, 127, 164, 0.15);
+  color: #3f6f92;
+  border: 1px solid rgba(91, 127, 164, 0.25);
+}
+
+.badge-external {
+  background: rgba(196, 169, 122, 0.15);
+  color: #9e8555;
+  border: 1px solid rgba(196, 169, 122, 0.25);
+}
+
+.badge-symlink {
+  background: rgba(107, 143, 107, 0.15);
+  color: #4d7d4d;
+  border: 1px solid rgba(107, 143, 107, 0.25);
+}
+
+/* Managed skill indicator bar */
+.agent-detail-skill.managed-skill {
+  border-left: 3px solid var(--accent);
+}
+
+.agent-detail-skill.external-skill {
+  border-left: 3px solid var(--warning);
+}
+
 /* ===== Graph / Connection View ===== */
 .graph-view {
   position: relative;

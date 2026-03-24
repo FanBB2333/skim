@@ -792,7 +792,12 @@ function SplitSkillsView({ skills, agents, currentEnv, selectedEnv, splitAgent, 
                     <div className="skill-info">
                       <div className="skill-name">
                         {skill.name}
-                        {isInstalled && <span className="badge badge-success" style={{ marginLeft: '8px' }}>Installed</span>}
+                        {isInstalled && (() => {
+                          const ref = agentSkills.find(s => s.Name === skill.name);
+                          return ref?.IsManaged
+                            ? <span className="badge badge-managed" style={{ marginLeft: '8px' }}>skim-managed</span>
+                            : <span className="badge badge-external" style={{ marginLeft: '8px' }}>external</span>;
+                        })()}
                       </div>
                       <div className="skill-description">{skill.description || 'No description'}</div>
                     </div>
@@ -1184,10 +1189,13 @@ function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, edit
         ) : (
           <div className="list">
             {agentSkills.map(skill => (
-              <div key={skill.Name} className={`agent-detail-skill ${editingSkill === skill.Name ? 'active' : ''}`} onClick={() => onSkillClick(skill.Name)} onContextMenu={(e) => onSkillContextMenu(e, skill)}>
+              <div key={skill.Name} className={`agent-detail-skill ${editingSkill === skill.Name ? 'active' : ''} ${skill.IsManaged ? 'managed-skill' : 'external-skill'}`} onClick={() => onSkillClick(skill.Name)} onContextMenu={(e) => onSkillContextMenu(e, skill)}>
                 <div className="agent-detail-skill-name">{skill.Name}</div>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  {skill.IsManaged && <span className="badge badge-info">skim</span>}
+                  {skill.IsManaged
+                    ? <span className="badge badge-managed">skim-managed</span>
+                    : <span className="badge badge-external">external</span>
+                  }
                   <span className="badge badge-success">View</span>
                 </div>
               </div>
