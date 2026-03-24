@@ -403,7 +403,7 @@ function App() {
           <EnvsView envs={envs} skills={skills} selectedEnv={selectedEnv} onSelectEnv={setSelectedEnv} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} onToggleSkill={handleToggleSkill} />
         )}
         {view === 'settings' && (
-          <SettingsView theme={theme} onThemeChange={handleThemeChange} config={configData} status={status} onToggleAgent={handleToggleAgent} onResetConfig={handleResetConfig} />
+          <SettingsView theme={theme} onThemeChange={handleThemeChange} config={configData} status={status} onToggleAgent={handleToggleAgent} onResetConfig={handleResetConfig} onSetLinkStrategy={async (s) => { handleResult(await api.setLinkStrategy(s)); refresh(); }} />
         )}
         {view === 'agents' && (
           selectedAgent ? (
@@ -1267,9 +1267,10 @@ interface SettingsViewProps {
   status: StatusResponse | null;
   onToggleAgent: (agentID: string, enabled: boolean) => void;
   onResetConfig: () => void;
+  onSetLinkStrategy: (strategy: string) => void;
 }
 
-function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onResetConfig }: SettingsViewProps) {
+function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onResetConfig, onSetLinkStrategy }: SettingsViewProps) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const agentIcons: Record<string, string> = {
@@ -1356,7 +1357,10 @@ function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onR
           </div>
           <div className="settings-info-row">
             <span className="settings-info-label">Link Strategy</span>
-            <span className="settings-info-value">{config?.linkStrategy || 'copy'}</span>
+            <div className="btn-group">
+              <button className={`btn btn-sm ${(config?.linkStrategy || 'copy') === 'copy' ? 'btn-primary' : 'btn-outline'}`} onClick={() => onSetLinkStrategy('copy')}>Copy</button>
+              <button className={`btn btn-sm ${config?.linkStrategy === 'symlink' ? 'btn-primary' : 'btn-outline'}`} onClick={() => onSetLinkStrategy('symlink')}>Symlink</button>
+            </div>
           </div>
           <div className="settings-info-row">
             <span className="settings-info-label">Skills in Store</span>

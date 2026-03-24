@@ -9,6 +9,7 @@ import (
 	"github.com/FanBB2333/skim/internal/agent"
 	"github.com/FanBB2333/skim/internal/config"
 	"github.com/FanBB2333/skim/internal/core"
+	_ "github.com/FanBB2333/skim/internal/linker" // ensure linker package is available
 	"github.com/FanBB2333/skim/internal/model"
 )
 
@@ -398,6 +399,24 @@ func (a *App) SetAgentEnabled(agentID string, enabled bool) *OperationResult {
 		action = "Disabled"
 	}
 	return &OperationResult{Success: true, Message: fmt.Sprintf("%s agent %q", action, agentID)}
+}
+
+// SetLinkStrategy updates the link strategy (copy or symlink).
+func (a *App) SetLinkStrategy(strategy string) *OperationResult {
+	if a.svc == nil {
+		return &OperationResult{Success: false, Message: "service not initialized"}
+	}
+	if strategy != "copy" && strategy != "symlink" {
+		return &OperationResult{Success: false, Message: fmt.Sprintf("invalid strategy %q: must be 'copy' or 'symlink'", strategy)}
+	}
+	a.svc.Config.LinkStrategy = strategy
+	if err := config.Save(a.svc.Config); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	// Rebuild linker with new strategy
+	a.svc.Linker = core.NewLinker(strategy)
+	a.svc.Activator = core.NewActivator(a.svc.Store, a.svc.Env, a.svc.State, a.svc.Registry, a.svc.Linker)
+	return &OperationResult{Success: true, Message: fmt.Sprintf("Link strategy set to %q", strategy)}
 }
 
 // ResetConfig resets the configuration to defaults.

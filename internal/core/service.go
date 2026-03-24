@@ -19,13 +19,21 @@ type Service struct {
 	Linker    linker.Linker
 }
 
+// NewLinker creates a Linker based on the given strategy string.
+func NewLinker(strategy string) linker.Linker {
+	if strategy == "symlink" {
+		return linker.NewSymlinkLinker()
+	}
+	return linker.NewCopyLinker()
+}
+
 // NewService creates a fully wired Service from the given config.
 func NewService(cfg model.Config) *Service {
 	stateMgr := NewStateManager()
 	storeMgr := NewStoreManager()
 	envMgr := NewEnvManager()
 	reg := agent.NewRegistry(cfg)
-	lnk := linker.NewCopyLinker()
+	lnk := NewLinker(cfg.LinkStrategy)
 	activator := NewActivator(storeMgr, envMgr, stateMgr, reg, lnk)
 	scanner := NewScanner(storeMgr, reg)
 

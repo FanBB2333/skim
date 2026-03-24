@@ -26,6 +26,7 @@ declare global {
           ResetConfig: () => Promise<OperationResult>;
           InstallSkillToAgent: (agentID: string, skillName: string) => Promise<OperationResult>;
           RemoveSkillFromAgent: (agentID: string, skillName: string) => Promise<OperationResult>;
+          SetLinkStrategy: (strategy: string) => Promise<OperationResult>;
         };
       };
     };
@@ -54,4 +55,5 @@ export const api = {
   resetConfig: () => window.go.api.App.ResetConfig(),
   installSkillToAgent: (agentID: string, skillName: string) => window.go.api.App.InstallSkillToAgent(agentID, skillName),
   removeSkillFromAgent: (agentID: string, skillName: string) => window.go.api.App.RemoveSkillFromAgent(agentID, skillName),
+  setLinkStrategy: (strategy: string) => window.go.api.App.SetLinkStrategy(strategy),
 };
