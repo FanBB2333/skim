@@ -137,7 +137,7 @@ function applyTheme(themeId: ThemeId) {
   }
   localStorage.setItem('skim-theme', themeId);
 }
-type SkillsLayout = 'list' | 'split';
+type SkillsLayout = 'list' | 'split' | 'graph';
 
 interface Toast {
   message: string;
@@ -690,6 +690,7 @@ function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv
         <div className="btn-group">
           <button className={`btn btn-outline btn-sm ${layout === 'list' ? 'active' : ''}`} onClick={() => onLayoutChange('list')}>List</button>
           <button className={`btn btn-outline btn-sm ${layout === 'split' ? 'active' : ''}`} onClick={() => onLayoutChange('split')}>Split</button>
+          <button className={`btn btn-outline btn-sm ${layout === 'graph' ? 'active' : ''}`} onClick={() => onLayoutChange('graph')}>Graph</button>
         </div>
       </div>
 
@@ -700,7 +701,7 @@ function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv
           </div>
           <SkillList skills={skills} currentEnv={currentEnv} selectedEnv={selectedEnv} onToggleSkill={onToggleSkill} onContextMenu={onSkillContextMenu} />
         </div>
-      ) : (
+      ) : layout === 'split' ? (
         <SplitSkillsView
           skills={skills}
           agents={availableAgents}
@@ -711,6 +712,8 @@ function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv
           onToggleSkill={onToggleSkill}
           onSkillContextMenu={onSkillContextMenu}
         />
+      ) : (
+        <GraphSkillsView skills={skills} agents={availableAgents} onSkillContextMenu={onSkillContextMenu} />
       )}
     </>
   );
@@ -801,6 +804,153 @@ function SplitSkillsView({ skills, agents, currentEnv, selectedEnv, splitAgent, 
         ) : (
           <div className="split-right-empty">Select an agent to view skills</div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ===== Graph Skills View (Connection Diagram) ===== */
+interface GraphSkillsViewProps {
+  skills: SkillInfo[];
+  agents: AgentInfo[];
+  onSkillContextMenu: (e: React.MouseEvent, name: string) => void;
+}
+
+function GraphSkillsView({ skills, agents, onSkillContextMenu }: GraphSkillsViewProps) {
+  const [agentSkillsMap, setAgentSkillsMap] = useState<Record<string, SkillRef[]>>({});
+  const [hoveredSkill, setHoveredSkill] = useState<string | null>(null);
+  const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const skillRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const agentRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [lines, setLines] = useState<{ x1: number; y1: number; x2: number; y2: number; skillName: string; agentId: string; managed: boolean }[]>([]);
+
+  useEffect(() => {
+    const loadAll = async () => {
+      const map: Record<string, SkillRef[]> = {};
+      for (const ag of agents) {
+        try {
+          const skills = await api.getAgentSkills(ag.id);
+          map[ag.id] = skills || [];
+        } catch {
+          map[ag.id] = [];
+        }
+      }
+      setAgentSkillsMap(map);
+    };
+    loadAll();
+  }, [agents]);
+
+  // Compute lines whenever layout changes
+  useEffect(() => {
+    const compute = () => {
+      if (!containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newLines: typeof lines = [];
+      for (const ag of agents) {
+        const agentSkills = agentSkillsMap[ag.id] || [];
+        for (const sk of agentSkills) {
+          const skillEl = skillRefs.current[sk.Name];
+          const agentEl = agentRefs.current[ag.id];
+          if (skillEl && agentEl) {
+            const sRect = skillEl.getBoundingClientRect();
+            const aRect = agentEl.getBoundingClientRect();
+            newLines.push({
+              x1: sRect.right - containerRect.left,
+              y1: sRect.top + sRect.height / 2 - containerRect.top,
+              x2: aRect.left - containerRect.left,
+              y2: aRect.top + aRect.height / 2 - containerRect.top,
+              skillName: sk.Name,
+              agentId: ag.id,
+              managed: sk.IsManaged,
+            });
+          }
+        }
+      }
+      setLines(newLines);
+    };
+    // Delay to allow DOM to render
+    const timer = setTimeout(compute, 100);
+    return () => clearTimeout(timer);
+  }, [agentSkillsMap, agents, skills]);
+
+  const isHighlighted = (skillName: string, agentId: string) => {
+    if (hoveredSkill) return skillName === hoveredSkill;
+    if (hoveredAgent) return agentId === hoveredAgent;
+    return false;
+  };
+
+  return (
+    <div className="graph-view" ref={containerRef}>
+      <div className="graph-columns">
+        {/* Skills column */}
+        <div className="graph-column">
+          <div className="graph-column-header">Skills ({skills.length})</div>
+          {skills.map(skill => {
+            const connected = hoveredSkill === skill.name || lines.some(l => l.skillName === skill.name && hoveredAgent === l.agentId);
+            return (
+              <div
+                key={skill.name}
+                ref={el => { skillRefs.current[skill.name] = el; }}
+                className={`graph-node graph-skill-node ${connected ? 'highlighted' : ''} ${hoveredSkill === skill.name ? 'hovered' : ''}`}
+                onMouseEnter={() => setHoveredSkill(skill.name)}
+                onMouseLeave={() => setHoveredSkill(null)}
+                onContextMenu={(e) => onSkillContextMenu(e, skill.name)}
+              >
+                <div className="graph-node-name">{skill.name}</div>
+                <div className="graph-node-desc">{skill.description || 'No description'}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* SVG connection lines */}
+        <svg className="graph-lines">
+          {lines.map((line, i) => {
+            const highlighted = isHighlighted(line.skillName, line.agentId);
+            return (
+              <path
+                key={i}
+                d={`M ${line.x1} ${line.y1} C ${line.x1 + 60} ${line.y1}, ${line.x2 - 60} ${line.y2}, ${line.x2} ${line.y2}`}
+                fill="none"
+                stroke={highlighted ? (line.managed ? 'var(--accent)' : 'var(--warning)') : 'var(--border)'}
+                strokeWidth={highlighted ? 2.5 : 1.5}
+                strokeDasharray={line.managed ? 'none' : '6 3'}
+                opacity={hoveredSkill || hoveredAgent ? (highlighted ? 1 : 0.15) : 0.6}
+                style={{ transition: 'all 0.2s ease' }}
+              />
+            );
+          })}
+        </svg>
+
+        {/* Agents column */}
+        <div className="graph-column">
+          <div className="graph-column-header">Agents ({agents.length})</div>
+          {agents.map(ag => {
+            const connected = hoveredAgent === ag.id || lines.some(l => l.agentId === ag.id && hoveredSkill === l.skillName);
+            return (
+              <div
+                key={ag.id}
+                ref={el => { agentRefs.current[ag.id] = el; }}
+                className={`graph-node graph-agent-node ${connected ? 'highlighted' : ''} ${hoveredAgent === ag.id ? 'hovered' : ''}`}
+                onMouseEnter={() => setHoveredAgent(ag.id)}
+                onMouseLeave={() => setHoveredAgent(null)}
+              >
+                <div className="graph-node-icon">{ag.id[0].toUpperCase()}</div>
+                <div>
+                  <div className="graph-node-name">{ag.name}</div>
+                  <div className="graph-node-desc">{(agentSkillsMap[ag.id] || []).length} skills</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="graph-legend">
+        <div className="graph-legend-item"><svg width="24" height="2"><line x1="0" y1="1" x2="24" y2="1" stroke="var(--accent)" strokeWidth="2" /></svg> Managed by skim</div>
+        <div className="graph-legend-item"><svg width="24" height="2"><line x1="0" y1="1" x2="24" y2="1" stroke="var(--warning)" strokeWidth="2" strokeDasharray="6 3" /></svg> Not managed</div>
       </div>
     </div>
   );
