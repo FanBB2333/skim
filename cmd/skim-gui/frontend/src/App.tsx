@@ -139,6 +139,21 @@ function applyTheme(themeId: ThemeId) {
 }
 type SkillsLayout = 'list' | 'split' | 'graph';
 
+type FontFamily = 'system' | 'serif' | 'mono';
+
+const FONT_FAMILIES: Record<FontFamily, string> = {
+  system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif",
+  serif: "Georgia, 'Times New Roman', Times, serif",
+  mono: "'SF Mono', Monaco, Consolas, 'Courier New', monospace",
+};
+
+function applyUIPrefs(fontFamily: FontFamily, fontSize: number) {
+  document.documentElement.style.setProperty('--ui-font-family', FONT_FAMILIES[fontFamily]);
+  document.documentElement.style.setProperty('--ui-font-size', `${fontSize}px`);
+  document.body.style.fontFamily = FONT_FAMILIES[fontFamily];
+  document.body.style.fontSize = `${fontSize}px`;
+}
+
 interface Toast {
   message: string;
   type: 'success' | 'error';
@@ -147,6 +162,8 @@ interface Toast {
 function App() {
   const [view, setView] = useState<View>('dashboard');
   const [theme, setTheme] = useState<ThemeId>(() => (localStorage.getItem('skim-theme') as ThemeId) || 'morandi-light');
+  const [fontFamily, setFontFamily] = useState<FontFamily>(() => (localStorage.getItem('skim-font-family') as FontFamily) || 'system');
+  const [fontSize, setFontSize] = useState<number>(() => parseInt(localStorage.getItem('skim-font-size') || '14', 10));
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [envs, setEnvs] = useState<EnvInfo[]>([]);
@@ -210,6 +227,7 @@ function App() {
   }, [selectedEnv]);
 
   useEffect(() => { applyTheme(theme); }, [theme]);
+  useEffect(() => { applyUIPrefs(fontFamily, fontSize); }, [fontFamily, fontSize]);
   useEffect(() => { refresh(); }, [refresh]);
 
   const handleActivate = async (envName: string) => {
@@ -292,6 +310,16 @@ function App() {
 
   const handleThemeChange = (id: ThemeId) => {
     setTheme(id);
+  };
+
+  const handleFontFamilyChange = (ff: FontFamily) => {
+    setFontFamily(ff);
+    localStorage.setItem('skim-font-family', ff);
+  };
+
+  const handleFontSizeChange = (size: number) => {
+    setFontSize(size);
+    localStorage.setItem('skim-font-size', String(size));
   };
 
   const handleToggleAgent = async (agentID: string, enabled: boolean) => {
@@ -403,7 +431,7 @@ function App() {
           <EnvsView envs={envs} skills={skills} selectedEnv={selectedEnv} onSelectEnv={setSelectedEnv} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} onToggleSkill={handleToggleSkill} />
         )}
         {view === 'settings' && (
-          <SettingsView theme={theme} onThemeChange={handleThemeChange} config={configData} status={status} onToggleAgent={handleToggleAgent} onResetConfig={handleResetConfig} onSetLinkStrategy={async (s) => { handleResult(await api.setLinkStrategy(s)); refresh(); }} />
+          <SettingsView theme={theme} onThemeChange={handleThemeChange} config={configData} status={status} onToggleAgent={handleToggleAgent} onResetConfig={handleResetConfig} onSetLinkStrategy={async (s) => { handleResult(await api.setLinkStrategy(s)); refresh(); }} fontFamily={fontFamily} onFontFamilyChange={handleFontFamilyChange} fontSize={fontSize} onFontSizeChange={handleFontSizeChange} />
         )}
         {view === 'agents' && (
           selectedAgent ? (
@@ -1268,9 +1296,13 @@ interface SettingsViewProps {
   onToggleAgent: (agentID: string, enabled: boolean) => void;
   onResetConfig: () => void;
   onSetLinkStrategy: (strategy: string) => void;
+  fontFamily: FontFamily;
+  onFontFamilyChange: (ff: FontFamily) => void;
+  fontSize: number;
+  onFontSizeChange: (size: number) => void;
 }
 
-function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onResetConfig, onSetLinkStrategy }: SettingsViewProps) {
+function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onResetConfig, onSetLinkStrategy, fontFamily, onFontFamilyChange, fontSize, onFontSizeChange }: SettingsViewProps) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const agentIcons: Record<string, string> = {
@@ -1311,6 +1343,30 @@ function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onR
               {theme === t.id && <div className="theme-active-badge">Active</div>}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* UI Preferences */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">UI Preferences</span>
+        </div>
+        <div className="settings-section">
+          <div className="settings-info-row">
+            <span className="settings-info-label">Font Family</span>
+            <select className="settings-select" value={fontFamily} onChange={(e) => onFontFamilyChange(e.target.value as FontFamily)}>
+              <option value="system">System (Sans-serif)</option>
+              <option value="serif">Serif (Georgia)</option>
+              <option value="mono">Monospace (SF Mono)</option>
+            </select>
+          </div>
+          <div className="settings-info-row">
+            <span className="settings-info-label">Font Size</span>
+            <div className="settings-range-group">
+              <input type="range" className="settings-range" min="11" max="18" step="1" value={fontSize} onChange={(e) => onFontSizeChange(parseInt(e.target.value, 10))} />
+              <span className="settings-range-value">{fontSize}px</span>
+            </div>
+          </div>
         </div>
       </div>
 

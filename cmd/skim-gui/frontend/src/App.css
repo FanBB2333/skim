@@ -1435,6 +1435,43 @@ body {
   color: #fff;
 }
 
+/* Settings - UI Preferences */
+.settings-select {
+  padding: 6px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(155, 142, 126, 0.15);
+}
+
+.settings-range-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-range {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.settings-range-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 36px;
+  text-align: center;
+}
+
 /* Settings Sections */
 .settings-section {
   padding: 4px 0;
