@@ -24,6 +24,8 @@ declare global {
           GetConfig: () => Promise<ConfigResponse>;
           SetAgentEnabled: (agentID: string, enabled: boolean) => Promise<OperationResult>;
           ResetConfig: () => Promise<OperationResult>;
+          InstallSkillToAgent: (agentID: string, skillName: string) => Promise<OperationResult>;
+          RemoveSkillFromAgent: (agentID: string, skillName: string) => Promise<OperationResult>;
         };
       };
     };
@@ -50,4 +52,6 @@ export const api = {
   getConfig: () => window.go.api.App.GetConfig(),
   setAgentEnabled: (agentID: string, enabled: boolean) => window.go.api.App.SetAgentEnabled(agentID, enabled),
   resetConfig: () => window.go.api.App.ResetConfig(),
+  installSkillToAgent: (agentID: string, skillName: string) => window.go.api.App.InstallSkillToAgent(agentID, skillName),
+  removeSkillFromAgent: (agentID: string, skillName: string) => window.go.api.App.RemoveSkillFromAgent(agentID, skillName),
 };

@@ -413,6 +413,40 @@ func (a *App) ResetConfig() *OperationResult {
 	return &OperationResult{Success: true, Message: "Configuration reset to defaults"}
 }
 
+// InstallSkillToAgent installs a skill from the global store directly to a specific agent.
+func (a *App) InstallSkillToAgent(agentID, skillName string) *OperationResult {
+	if a.svc == nil {
+		return &OperationResult{Success: false, Message: "service not initialized"}
+	}
+	ag := a.svc.Registry.Get(agentID)
+	if ag == nil {
+		return &OperationResult{Success: false, Message: fmt.Sprintf("agent %q not found", agentID)}
+	}
+	skill, err := a.svc.Store.Get(skillName)
+	if err != nil {
+		return &OperationResult{Success: false, Message: fmt.Sprintf("skill %q not found in store", skillName)}
+	}
+	if err := ag.InstallSkill(*skill, a.svc.Linker); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	return &OperationResult{Success: true, Message: fmt.Sprintf("Installed %q to %s", skillName, ag.Name())}
+}
+
+// RemoveSkillFromAgent removes a skill from a specific agent.
+func (a *App) RemoveSkillFromAgent(agentID, skillName string) *OperationResult {
+	if a.svc == nil {
+		return &OperationResult{Success: false, Message: "service not initialized"}
+	}
+	ag := a.svc.Registry.Get(agentID)
+	if ag == nil {
+		return &OperationResult{Success: false, Message: fmt.Sprintf("agent %q not found", agentID)}
+	}
+	if err := ag.RemoveSkill(skillName, a.svc.Linker); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	return &OperationResult{Success: true, Message: fmt.Sprintf("Removed %q from %s", skillName, ag.Name())}
+}
+
 // ReadStoreSkillContent reads the SKILL.md content from the global store.
 func (a *App) ReadStoreSkillContent(skillName string) (*SkillDetail, error) {
 	skill, err := a.svc.Store.Get(skillName)

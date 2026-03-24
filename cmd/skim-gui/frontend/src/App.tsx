@@ -7,6 +7,57 @@ type View = 'dashboard' | 'skills' | 'envs' | 'agents' | 'settings';
 
 type ThemeId = 'morandi-light' | 'morandi-dark' | 'ocean' | 'forest' | 'rose';
 
+/* ===== Context Menu ===== */
+interface ContextMenuItem {
+  label: string;
+  icon?: ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+}
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  items: (ContextMenuItem | 'separator' | { label: string; type: 'label' })[];
+}
+
+function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const keyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('keydown', keyHandler);
+    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('keydown', keyHandler); };
+  }, [onClose]);
+
+  // Adjust position if it overflows the viewport
+  const style: React.CSSProperties = { left: menu.x, top: menu.y };
+  if (typeof window !== 'undefined') {
+    if (menu.x + 200 > window.innerWidth) style.left = menu.x - 200;
+    if (menu.y + 300 > window.innerHeight) style.top = Math.max(4, menu.y - 300);
+  }
+
+  return (
+    <div className="context-menu" ref={ref} style={style}>
+      {menu.items.map((item, i) => {
+        if (item === 'separator') return <div key={i} className="context-menu-separator" />;
+        if ('type' in item && item.type === 'label') return <div key={i} className="context-menu-label">{item.label}</div>;
+        const menuItem = item as ContextMenuItem;
+        return (
+          <div key={i} className={`context-menu-item ${menuItem.danger ? 'danger' : ''}`} onClick={() => { menuItem.onClick(); onClose(); }}>
+            {menuItem.icon}
+            {menuItem.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 interface ThemeDef {
   id: ThemeId;
   name: string;
@@ -121,6 +172,9 @@ function App() {
 
   // Settings state
   const [configData, setConfigData] = useState<ConfigResponse | null>(null);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -252,6 +306,60 @@ function App() {
     if (result.success) refresh();
   };
 
+  const handleInstallSkillToAgent = async (agentID: string, skillName: string) => {
+    const result = await api.installSkillToAgent(agentID, skillName);
+    handleResult(result);
+    refresh();
+  };
+
+  const handleRemoveSkillFromAgent = async (agentID: string, skillName: string) => {
+    const result = await api.removeSkillFromAgent(agentID, skillName);
+    handleResult(result);
+    refresh();
+  };
+
+  const buildSkillContextMenu = (e: React.MouseEvent, skillName: string) => {
+    e.preventDefault();
+    const availableAgents = agents.filter(a => a.available);
+    const isInEnv = currentEnv?.skills?.includes(skillName) ?? false;
+    const items: ContextMenuState['items'] = [];
+
+    // Environment actions
+    if (selectedEnv) {
+      items.push(
+        isInEnv
+          ? { label: `Remove from "${selectedEnv}"`, icon: <IconMinus />, onClick: () => handleToggleSkill(skillName, true) }
+          : { label: `Add to "${selectedEnv}"`, icon: <IconPlus />, onClick: () => handleToggleSkill(skillName, false) }
+      );
+    }
+
+    // Agent install actions
+    if (availableAgents.length > 0) {
+      items.push('separator');
+      items.push({ label: 'Install to Agent', type: 'label' });
+      for (const ag of availableAgents) {
+        items.push({ label: ag.name, icon: <IconInstall />, onClick: () => handleInstallSkillToAgent(ag.id, skillName) });
+      }
+    }
+
+    // Danger zone
+    items.push('separator');
+    items.push({ label: 'Remove from Store', icon: <IconTrash />, onClick: async () => { handleResult(await api.removeSkill(skillName)); refresh(); }, danger: true });
+
+    setContextMenu({ x: e.clientX, y: e.clientY, items });
+  };
+
+  const buildAgentSkillContextMenu = (e: React.MouseEvent, agentID: string, skill: SkillRef) => {
+    e.preventDefault();
+    const items: ContextMenuState['items'] = [];
+    items.push({ label: 'View / Edit', icon: <IconEdit />, onClick: () => openSkillEditor(agentID, skill.Name) });
+    if (skill.IsManaged) {
+      items.push('separator');
+      items.push({ label: 'Remove from Agent', icon: <IconTrash />, onClick: () => handleRemoveSkillFromAgent(agentID, skill.Name), danger: true });
+    }
+    setContextMenu({ x: e.clientX, y: e.clientY, items });
+  };
+
   const currentEnv = envs.find(e => e.name === selectedEnv);
 
   if (loading) {
@@ -289,7 +397,7 @@ function App() {
           <DashboardView status={status} onActivate={handleActivate} onDeactivate={handleDeactivate} onScan={handleScan} envs={envs} agents={agents} onAgentClick={a => { setView('agents'); openAgentDetail(a); }} />
         )}
         {view === 'skills' && (
-          <SkillsView skills={skills} envs={envs} agents={agents} selectedEnv={selectedEnv} currentEnv={currentEnv} onSelectEnv={setSelectedEnv} onToggleSkill={handleToggleSkill} layout={skillsLayout} onLayoutChange={setSkillsLayout} splitAgent={splitAgent} onSplitAgentChange={setSplitAgent} />
+          <SkillsView skills={skills} envs={envs} agents={agents} selectedEnv={selectedEnv} currentEnv={currentEnv} onSelectEnv={setSelectedEnv} onToggleSkill={handleToggleSkill} layout={skillsLayout} onLayoutChange={setSkillsLayout} splitAgent={splitAgent} onSplitAgentChange={setSplitAgent} onSkillContextMenu={buildSkillContextMenu} />
         )}
         {view === 'envs' && (
           <EnvsView envs={envs} skills={skills} selectedEnv={selectedEnv} onSelectEnv={setSelectedEnv} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} onToggleSkill={handleToggleSkill} />
@@ -314,6 +422,7 @@ function App() {
               onEditorChange={(v) => { setEditorContent(v || ''); setEditorDirty(true); }}
               onSave={saveSkillContent}
               onCloseEditor={() => setEditingSkill(null)}
+              onSkillContextMenu={(e, skill) => buildAgentSkillContextMenu(e, selectedAgent.id, skill)}
             />
           ) : (
             <AgentsView agents={agents} onScan={handleScan} onAgentClick={openAgentDetail} />
@@ -322,6 +431,7 @@ function App() {
       </main>
 
       {toast && <div className={`toast toast-${toast.type}`}>{toast.message}</div>}
+      {contextMenu && <ContextMenu menu={contextMenu} onClose={() => setContextMenu(null)} />}
     </div>
   );
 }
@@ -384,6 +494,21 @@ function IconSettings() {
 }
 function IconBack() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
+}
+function IconPlus() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+}
+function IconMinus() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+}
+function IconInstall() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+}
+function IconTrash() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
+}
+function IconEdit() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 }
 
 /* ===== Dashboard ===== */
@@ -530,9 +655,10 @@ interface SkillsViewProps {
   onLayoutChange: (layout: SkillsLayout) => void;
   splitAgent: string;
   onSplitAgentChange: (id: string) => void;
+  onSkillContextMenu: (e: React.MouseEvent, skillName: string) => void;
 }
 
-function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv, onToggleSkill, layout, onLayoutChange, splitAgent, onSplitAgentChange }: SkillsViewProps) {
+function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv, onToggleSkill, layout, onLayoutChange, splitAgent, onSplitAgentChange, onSkillContextMenu }: SkillsViewProps) {
   const availableAgents = agents.filter(a => a.available);
 
   // Auto-select first available agent for split view
@@ -572,7 +698,7 @@ function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv
           <div className="card-header">
             <span className="card-title">Skills in Store ({skills.length}){selectedEnv && ` \u2014 ${selectedEnv}`}</span>
           </div>
-          <SkillList skills={skills} currentEnv={currentEnv} selectedEnv={selectedEnv} onToggleSkill={onToggleSkill} />
+          <SkillList skills={skills} currentEnv={currentEnv} selectedEnv={selectedEnv} onToggleSkill={onToggleSkill} onContextMenu={onSkillContextMenu} />
         </div>
       ) : (
         <SplitSkillsView
@@ -583,13 +709,14 @@ function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv
           splitAgent={splitAgent}
           onSplitAgentChange={onSplitAgentChange}
           onToggleSkill={onToggleSkill}
+          onSkillContextMenu={onSkillContextMenu}
         />
       )}
     </>
   );
 }
 
-function SkillList({ skills, currentEnv, selectedEnv, onToggleSkill }: { skills: SkillInfo[]; currentEnv: EnvInfo | undefined; selectedEnv: string; onToggleSkill: (name: string, enabled: boolean) => void }) {
+function SkillList({ skills, currentEnv, selectedEnv, onToggleSkill, onContextMenu }: { skills: SkillInfo[]; currentEnv: EnvInfo | undefined; selectedEnv: string; onToggleSkill: (name: string, enabled: boolean) => void; onContextMenu: (e: React.MouseEvent, name: string) => void }) {
   if (skills.length === 0) {
     return <div className="empty-state"><h3>No Skills</h3><p>Run "skim agent scan" to import skills from your agents.</p></div>;
   }
@@ -598,7 +725,7 @@ function SkillList({ skills, currentEnv, selectedEnv, onToggleSkill }: { skills:
       {skills.map(skill => {
         const isEnabled = currentEnv?.skills?.includes(skill.name) ?? false;
         return (
-          <div key={skill.name} className="skill-item">
+          <div key={skill.name} className="skill-item" onContextMenu={(e) => onContextMenu(e, skill.name)}>
             <input type="checkbox" className="skill-checkbox" checked={isEnabled} onChange={() => onToggleSkill(skill.name, isEnabled)} disabled={!selectedEnv} />
             <div className="skill-info">
               <div className="skill-name">{skill.name}</div>
@@ -620,9 +747,10 @@ interface SplitSkillsViewProps {
   splitAgent: string;
   onSplitAgentChange: (id: string) => void;
   onToggleSkill: (name: string, enabled: boolean) => void;
+  onSkillContextMenu: (e: React.MouseEvent, name: string) => void;
 }
 
-function SplitSkillsView({ skills, agents, currentEnv, selectedEnv, splitAgent, onSplitAgentChange, onToggleSkill }: SplitSkillsViewProps) {
+function SplitSkillsView({ skills, agents, currentEnv, selectedEnv, splitAgent, onSplitAgentChange, onToggleSkill, onSkillContextMenu }: SplitSkillsViewProps) {
   const [agentSkills, setAgentSkills] = useState<SkillRef[]>([]);
 
   useEffect(() => {
@@ -656,7 +784,7 @@ function SplitSkillsView({ skills, agents, currentEnv, selectedEnv, splitAgent, 
                 const isEnabled = currentEnv?.skills?.includes(skill.name) ?? false;
                 const isInstalled = agentSkillNames.has(skill.name);
                 return (
-                  <div key={skill.name} className="skill-item">
+                  <div key={skill.name} className="skill-item" onContextMenu={(e) => onSkillContextMenu(e, skill.name)}>
                     <input type="checkbox" className="skill-checkbox" checked={isEnabled} onChange={() => onToggleSkill(skill.name, isEnabled)} disabled={!selectedEnv} />
                     <div className="skill-info">
                       <div className="skill-name">
@@ -879,9 +1007,10 @@ interface AgentDetailViewProps {
   onEditorChange: (value: string | undefined) => void;
   onSave: () => void;
   onCloseEditor: () => void;
+  onSkillContextMenu: (e: React.MouseEvent, skill: SkillRef) => void;
 }
 
-function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, editorTheme, skillLoading, skillLoadError, onBack, onSkillClick, onEditorChange, onSave, onCloseEditor }: AgentDetailViewProps) {
+function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, editorTheme, skillLoading, skillLoadError, onBack, onSkillClick, onEditorChange, onSave, onCloseEditor, onSkillContextMenu }: AgentDetailViewProps) {
   const editorRef = useRef<unknown>(null);
 
   return (
@@ -905,7 +1034,7 @@ function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, edit
         ) : (
           <div className="list">
             {agentSkills.map(skill => (
-              <div key={skill.Name} className={`agent-detail-skill ${editingSkill === skill.Name ? 'active' : ''}`} onClick={() => onSkillClick(skill.Name)}>
+              <div key={skill.Name} className={`agent-detail-skill ${editingSkill === skill.Name ? 'active' : ''}`} onClick={() => onSkillClick(skill.Name)} onContextMenu={(e) => onSkillContextMenu(e, skill)}>
                 <div className="agent-detail-skill-name">{skill.Name}</div>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   {skill.IsManaged && <span className="badge badge-info">skim</span>}
