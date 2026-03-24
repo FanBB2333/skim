@@ -3,7 +3,89 @@ import Editor from '@monaco-editor/react';
 import { api } from './wailsjs';
 import type { StatusResponse, SkillInfo, EnvInfo, AgentInfo, OperationResult, SkillRef } from './types';
 
-type View = 'dashboard' | 'skills' | 'envs' | 'agents';
+type View = 'dashboard' | 'skills' | 'envs' | 'agents' | 'settings';
+
+type ThemeId = 'morandi-light' | 'morandi-dark' | 'ocean' | 'forest' | 'rose';
+
+interface ThemeDef {
+  id: ThemeId;
+  name: string;
+  preview: [string, string, string]; // three colors for preview swatch
+  vars: Record<string, string>;
+}
+
+const THEMES: ThemeDef[] = [
+  {
+    id: 'morandi-light', name: 'Morandi Light',
+    preview: ['#f5f0eb', '#9b8e7e', '#ffffff'],
+    vars: {
+      '--bg-primary': '#f5f0eb', '--bg-secondary': '#ede8e3', '--bg-tertiary': '#e2ddd7', '--bg-card': '#ffffff',
+      '--text-primary': '#4a4540', '--text-secondary': '#8a837b',
+      '--accent': '#9b8e7e', '--accent-hover': '#887a6b', '--accent-active': '#7a6d5e',
+      '--success': '#8fa388', '--warning': '#c4a97a', '--danger': '#bf8b8b',
+      '--border': '#d8d2cc', '--border-light': '#e8e3de',
+      '--shadow': 'rgba(74, 69, 64, 0.06)', '--sidebar-active-bg': 'rgba(155, 142, 126, 0.12)',
+    },
+  },
+  {
+    id: 'morandi-dark', name: 'Morandi Dark',
+    preview: ['#2a2725', '#a99e90', '#353230'],
+    vars: {
+      '--bg-primary': '#2a2725', '--bg-secondary': '#232120', '--bg-tertiary': '#1c1b1a', '--bg-card': '#353230',
+      '--text-primary': '#e0dbd5', '--text-secondary': '#9a9389',
+      '--accent': '#a99e90', '--accent-hover': '#bbb1a3', '--accent-active': '#c8bfb2',
+      '--success': '#8fa388', '--warning': '#c4a97a', '--danger': '#bf8b8b',
+      '--border': '#4a4644', '--border-light': '#3e3b39',
+      '--shadow': 'rgba(0, 0, 0, 0.2)', '--sidebar-active-bg': 'rgba(169, 158, 144, 0.12)',
+    },
+  },
+  {
+    id: 'ocean', name: 'Ocean',
+    preview: ['#eef3f8', '#5b7fa4', '#ffffff'],
+    vars: {
+      '--bg-primary': '#eef3f8', '--bg-secondary': '#e4ecf4', '--bg-tertiary': '#d6e1ed', '--bg-card': '#ffffff',
+      '--text-primary': '#2c3e50', '--text-secondary': '#7b8fa3',
+      '--accent': '#5b7fa4', '--accent-hover': '#4d6f92', '--accent-active': '#3f5f80',
+      '--success': '#6dab8a', '--warning': '#d4a94e', '--danger': '#c07070',
+      '--border': '#c8d6e3', '--border-light': '#dce6ef',
+      '--shadow': 'rgba(44, 62, 80, 0.06)', '--sidebar-active-bg': 'rgba(91, 127, 164, 0.10)',
+    },
+  },
+  {
+    id: 'forest', name: 'Forest',
+    preview: ['#f0f4ee', '#6b8f6b', '#ffffff'],
+    vars: {
+      '--bg-primary': '#f0f4ee', '--bg-secondary': '#e4ebe2', '--bg-tertiary': '#d7e0d5', '--bg-card': '#ffffff',
+      '--text-primary': '#3a4a3a', '--text-secondary': '#7d8f7d',
+      '--accent': '#6b8f6b', '--accent-hover': '#5c7e5c', '--accent-active': '#4d6d4d',
+      '--success': '#6b8f6b', '--warning': '#bfa75a', '--danger': '#b57575',
+      '--border': '#c8d4c6', '--border-light': '#dce5da',
+      '--shadow': 'rgba(58, 74, 58, 0.06)', '--sidebar-active-bg': 'rgba(107, 143, 107, 0.10)',
+    },
+  },
+  {
+    id: 'rose', name: 'Rose',
+    preview: ['#f8f0f2', '#b07a8a', '#ffffff'],
+    vars: {
+      '--bg-primary': '#f8f0f2', '--bg-secondary': '#f0e4e8', '--bg-tertiary': '#e6d7dc', '--bg-card': '#ffffff',
+      '--text-primary': '#4a3a40', '--text-secondary': '#9a848c',
+      '--accent': '#b07a8a', '--accent-hover': '#a06a7a', '--accent-active': '#905a6a',
+      '--success': '#8fa388', '--warning': '#c4a97a', '--danger': '#bf8b8b',
+      '--border': '#dcc8cf', '--border-light': '#ecdfe3',
+      '--shadow': 'rgba(74, 58, 64, 0.06)', '--sidebar-active-bg': 'rgba(176, 122, 138, 0.10)',
+    },
+  },
+];
+
+function applyTheme(themeId: ThemeId) {
+  const theme = THEMES.find(t => t.id === themeId);
+  if (!theme) return;
+  const root = document.documentElement;
+  for (const [key, value] of Object.entries(theme.vars)) {
+    root.style.setProperty(key, value);
+  }
+  localStorage.setItem('skim-theme', themeId);
+}
 type SkillsLayout = 'list' | 'split';
 
 interface Toast {
@@ -13,6 +95,7 @@ interface Toast {
 
 function App() {
   const [view, setView] = useState<View>('dashboard');
+  const [theme, setTheme] = useState<ThemeId>(() => (localStorage.getItem('skim-theme') as ThemeId) || 'morandi-light');
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [envs, setEnvs] = useState<EnvInfo[]>([]);
@@ -67,6 +150,7 @@ function App() {
     }
   }, [selectedEnv]);
 
+  useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { refresh(); }, [refresh]);
 
   const handleActivate = async (envName: string) => {
@@ -147,6 +231,10 @@ function App() {
     if (result.success) setEditorDirty(false);
   };
 
+  const handleThemeChange = (id: ThemeId) => {
+    setTheme(id);
+  };
+
   const currentEnv = envs.find(e => e.name === selectedEnv);
 
   if (loading) {
@@ -166,6 +254,7 @@ function App() {
             { id: 'skills' as View, label: 'Skills', icon: <IconSkills /> },
             { id: 'envs' as View, label: 'Environments', icon: <IconEnv /> },
             { id: 'agents' as View, label: 'Agents', icon: <IconAgents /> },
+            { id: 'settings' as View, label: 'Settings', icon: <IconSettings /> },
           ]).map(item => (
             <div key={item.id}
               className={`nav-item ${view === item.id ? 'active' : ''}`}
@@ -188,6 +277,9 @@ function App() {
         {view === 'envs' && (
           <EnvsView envs={envs} skills={skills} selectedEnv={selectedEnv} onSelectEnv={setSelectedEnv} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} onToggleSkill={handleToggleSkill} />
         )}
+        {view === 'settings' && (
+          <SettingsView theme={theme} onThemeChange={handleThemeChange} />
+        )}
         {view === 'agents' && (
           selectedAgent ? (
             <AgentDetailView
@@ -197,6 +289,7 @@ function App() {
               editorContent={editorContent}
               editorPath={editorPath}
               editorDirty={editorDirty}
+              editorTheme={theme === 'morandi-dark' ? 'vs-dark' : 'vs-light'}
               skillLoading={skillLoading}
               skillLoadError={skillLoadError}
               onBack={() => { setSelectedAgent(null); setEditingSkill(null); }}
@@ -267,6 +360,9 @@ function IconEnv() {
 }
 function IconAgents() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>;
+}
+function IconSettings() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 }
 function IconBack() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
@@ -720,6 +816,7 @@ interface AgentDetailViewProps {
   editorContent: string;
   editorPath: string;
   editorDirty: boolean;
+  editorTheme: string;
   skillLoading: boolean;
   skillLoadError: string | null;
   onBack: () => void;
@@ -728,7 +825,7 @@ interface AgentDetailViewProps {
   onSave: () => void;
 }
 
-function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, skillLoading, skillLoadError, onBack, onSkillClick, onEditorChange, onSave }: AgentDetailViewProps) {
+function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, editorTheme, skillLoading, skillLoadError, onBack, onSkillClick, onEditorChange, onSave }: AgentDetailViewProps) {
   const editorRef = useRef<unknown>(null);
 
   return (
@@ -791,7 +888,7 @@ function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, edit
                 value={editorContent}
                 onChange={onEditorChange}
                 onMount={(editor) => { editorRef.current = editor; }}
-                theme="vs-light"
+                theme={editorTheme}
                 options={{
                   minimap: { enabled: false },
                   fontSize: 13,
@@ -806,6 +903,43 @@ function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, edit
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+/* ===== Settings View ===== */
+function SettingsView({ theme, onThemeChange }: { theme: ThemeId; onThemeChange: (id: ThemeId) => void }) {
+  return (
+    <>
+      <div className="page-header">
+        <h2>Settings</h2>
+        <p>Customize the appearance of Skim</p>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Theme</span>
+        </div>
+        <div className="theme-grid">
+          {THEMES.map(t => (
+            <div
+              key={t.id}
+              className={`theme-card ${theme === t.id ? 'active' : ''}`}
+              onClick={() => onThemeChange(t.id)}
+            >
+              <div className="theme-preview">
+                <div className="theme-preview-sidebar" style={{ background: t.preview[1] }} />
+                <div className="theme-preview-main" style={{ background: t.preview[0] }}>
+                  <div className="theme-preview-card" style={{ background: t.preview[2], border: `1px solid ${t.vars['--border']}` }} />
+                  <div className="theme-preview-card" style={{ background: t.preview[2], border: `1px solid ${t.vars['--border']}` }} />
+                </div>
+              </div>
+              <div className="theme-name">{t.name}</div>
+              {theme === t.id && <div className="theme-active-badge">Active</div>}
+            </div>
+          ))}
+        </div>
+      </div>
     </>
   );
 }

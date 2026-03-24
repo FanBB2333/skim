@@ -1181,6 +1181,76 @@ body {
   flex-wrap: wrap;
 }
 
+/* ===== Settings / Theme Picker ===== */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.theme-card {
+  border: 2px solid var(--border-light);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.theme-card:hover {
+  border-color: var(--accent);
+}
+
+.theme-card.active {
+  border-color: var(--accent-active);
+  box-shadow: 0 0 0 2px rgba(155, 142, 126, 0.2);
+}
+
+.theme-preview {
+  display: flex;
+  height: 80px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-light);
+}
+
+.theme-preview-sidebar {
+  width: 28%;
+  min-width: 28%;
+}
+
+.theme-preview-main {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.theme-preview-card {
+  border-radius: 3px;
+  flex: 1;
+}
+
+.theme-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.theme-active-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--accent-active);
+  color: #fff;
+}
+
 .env-skill-version {
   padding: 2px 6px;
   background: rgba(155, 142, 126, 0.1);
