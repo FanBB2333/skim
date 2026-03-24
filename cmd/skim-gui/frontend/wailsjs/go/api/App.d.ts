@@ -17,6 +17,8 @@ export function GetAgentSkills(arg1:string):Promise<Array<model.SkillRef>>;
 
 export function GetAgents():Promise<Array<api.AgentInfo>>;
 
+export function GetConfig():Promise<api.ConfigResponse>;
+
 export function GetEnvs():Promise<Array<api.EnvInfo>>;
 
 export function GetSkills():Promise<Array<api.SkillInfo>>;
@@ -31,6 +33,10 @@ export function RemoveEnv(arg1:string):Promise<api.OperationResult>;
 
 export function RemoveSkill(arg1:string):Promise<api.OperationResult>;
 
+export function ResetConfig():Promise<api.OperationResult>;
+
 export function ScanAgents():Promise<api.OperationResult>;
+
+export function SetAgentEnabled(arg1:string,arg2:boolean):Promise<api.OperationResult>;
 
 export function WriteSkillContent(arg1:string,arg2:string,arg3:string):Promise<api.OperationResult>;

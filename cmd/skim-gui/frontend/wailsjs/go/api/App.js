@@ -30,6 +30,10 @@ export function GetAgents() {
   return window['go']['api']['App']['GetAgents']();
 }
 
+export function GetConfig() {
+  return window['go']['api']['App']['GetConfig']();
+}
+
 export function GetEnvs() {
   return window['go']['api']['App']['GetEnvs']();
 }
@@ -58,8 +62,16 @@ export function RemoveSkill(arg1) {
   return window['go']['api']['App']['RemoveSkill'](arg1);
 }
 
+export function ResetConfig() {
+  return window['go']['api']['App']['ResetConfig']();
+}
+
 export function ScanAgents() {
   return window['go']['api']['App']['ScanAgents']();
+}
+
+export function SetAgentEnabled(arg1, arg2) {
+  return window['go']['api']['App']['SetAgentEnabled'](arg1, arg2);
 }
 
 export function WriteSkillContent(arg1, arg2, arg3) {
