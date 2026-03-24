@@ -22,7 +22,8 @@ func DefaultConfig() Config {
 			"gemini":    {SkillDir: "~/.gemini", Enabled: true, Format: "gemini"},
 			"qoder":     {SkillDir: "~/.qoder/skills", Enabled: true, Format: "standard"},
 			"qoderwork": {SkillDir: "~/.qoderwork/skills", Enabled: true, Format: "standard"},
-			"openclaw":  {SkillDir: "~/.openclaw/skills", Enabled: true, Format: "standard"},
+			"openclaw":     {SkillDir: "~/.openclaw/skills", Enabled: true, Format: "standard"},
+			"antigravity": {SkillDir: "~/.gemini/antigravity/skills", Enabled: true, Format: "standard"},
 		},
 	}
 }
