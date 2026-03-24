@@ -296,6 +296,7 @@ function App() {
               onSkillClick={(name) => openSkillEditor(selectedAgent.id, name)}
               onEditorChange={(v) => { setEditorContent(v || ''); setEditorDirty(true); }}
               onSave={saveSkillContent}
+              onCloseEditor={() => setEditingSkill(null)}
             />
           ) : (
             <AgentsView agents={agents} onScan={handleScan} onAgentClick={openAgentDetail} />
@@ -823,9 +824,10 @@ interface AgentDetailViewProps {
   onSkillClick: (name: string) => void;
   onEditorChange: (value: string | undefined) => void;
   onSave: () => void;
+  onCloseEditor: () => void;
 }
 
-function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, editorTheme, skillLoading, skillLoadError, onBack, onSkillClick, onEditorChange, onSave }: AgentDetailViewProps) {
+function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, editorTheme, skillLoading, skillLoadError, onBack, onSkillClick, onEditorChange, onSave, onCloseEditor }: AgentDetailViewProps) {
   const editorRef = useRef<unknown>(null);
 
   return (
@@ -862,44 +864,53 @@ function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, edit
       </div>
 
       {editingSkill && (
-        <div className="editor-panel">
-          <div className="editor-header">
-            <div className="editor-title">{skillLoading ? `Loading ${editingSkill}...` : editorPath}</div>
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-              {editorDirty && <span className="badge badge-warning">Unsaved</span>}
-              <button className="btn btn-primary btn-sm" onClick={onSave} disabled={!editorDirty || skillLoading}>Save</button>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onCloseEditor(); }}>
+          <div className="modal-popup">
+            <div className="modal-popup-header">
+              <div className="modal-popup-title-row">
+                <div className="modal-popup-icon">&#9998;</div>
+                <div className="modal-popup-title-text">
+                  <div className="modal-popup-title">{editingSkill}</div>
+                  <div className="modal-popup-subtitle">{skillLoading ? 'Loading...' : editorPath}</div>
+                </div>
+              </div>
+              <div className="modal-popup-actions">
+                {editorDirty && <span className="badge badge-warning">Unsaved</span>}
+                <button className="btn btn-primary btn-sm" onClick={onSave} disabled={!editorDirty || skillLoading}>Save</button>
+                <button className="modal-popup-close" onClick={onCloseEditor}>&times;</button>
+              </div>
             </div>
-          </div>
-          <div className="editor-container">
-            {skillLoading ? (
-              <div className="editor-loading">
-                <div className="spinner" />
-                <p>Loading skill content...</p>
-              </div>
-            ) : skillLoadError ? (
-              <div className="editor-error">
-                <p>Failed to load skill content</p>
-                <p className="error-detail">{skillLoadError}</p>
-              </div>
-            ) : (
-              <Editor
-                height="100%"
-                defaultLanguage="markdown"
-                value={editorContent}
-                onChange={onEditorChange}
-                onMount={(editor) => { editorRef.current = editor; }}
-                theme={editorTheme}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: 'on',
-                  wordWrap: 'on',
-                  scrollBeyondLastLine: false,
-                  padding: { top: 12 },
-                  renderLineHighlight: 'gutter',
-                }}
-              />
-            )}
+            <div className="modal-popup-body">
+              {skillLoading ? (
+                <div className="editor-loading">
+                  <div className="spinner" />
+                  <p>Loading skill content...</p>
+                </div>
+              ) : skillLoadError ? (
+                <div className="editor-error">
+                  <p>Failed to load skill content</p>
+                  <p className="error-detail">{skillLoadError}</p>
+                </div>
+              ) : (
+                <Editor
+                  height="100%"
+                  defaultLanguage="markdown"
+                  value={editorContent}
+                  onChange={onEditorChange}
+                  onMount={(editor) => { editorRef.current = editor; }}
+                  theme={editorTheme}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 13,
+                    lineNumbers: 'on',
+                    wordWrap: 'on',
+                    scrollBeyondLastLine: false,
+                    padding: { top: 12 },
+                    renderLineHighlight: 'gutter',
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
