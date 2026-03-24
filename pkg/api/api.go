@@ -338,6 +338,81 @@ func (a *App) WriteSkillContent(agentID, skillName, content string) *OperationRe
 	return &OperationResult{Success: true, Message: fmt.Sprintf("Saved %s", skillPath)}
 }
 
+// AgentConfigInfo holds agent configuration for the frontend.
+type AgentConfigInfo struct {
+	ID       string `json:"id"`
+	SkillDir string `json:"skillDir"`
+	Enabled  bool   `json:"enabled"`
+	Format   string `json:"format"`
+}
+
+// ConfigResponse holds the full configuration for the frontend.
+type ConfigResponse struct {
+	Version      int               `json:"version"`
+	LinkStrategy string            `json:"linkStrategy"`
+	DataDir      string            `json:"dataDir"`
+	Agents       []AgentConfigInfo `json:"agents"`
+}
+
+// GetConfig returns the current configuration.
+func (a *App) GetConfig() (*ConfigResponse, error) {
+	if a.svc == nil {
+		return nil, fmt.Errorf("service not initialized")
+	}
+	resp := &ConfigResponse{
+		Version:      a.svc.Config.Version,
+		LinkStrategy: a.svc.Config.LinkStrategy,
+		DataDir:      config.SkimDir(),
+	}
+	for id, ac := range a.svc.Config.Agents {
+		resp.Agents = append(resp.Agents, AgentConfigInfo{
+			ID:       id,
+			SkillDir: ac.SkillDir,
+			Enabled:  ac.Enabled,
+			Format:   ac.Format,
+		})
+	}
+	return resp, nil
+}
+
+// SetAgentEnabled enables or disables an agent in the config.
+func (a *App) SetAgentEnabled(agentID string, enabled bool) *OperationResult {
+	if a.svc == nil {
+		return &OperationResult{Success: false, Message: "service not initialized"}
+	}
+	ac, ok := a.svc.Config.Agents[agentID]
+	if !ok {
+		return &OperationResult{Success: false, Message: fmt.Sprintf("agent %q not found", agentID)}
+	}
+	ac.Enabled = enabled
+	a.svc.Config.Agents[agentID] = ac
+	if err := config.Save(a.svc.Config); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	// Rebuild registry with updated config
+	a.svc.Registry = agent.NewRegistry(a.svc.Config)
+	a.svc.Activator = core.NewActivator(a.svc.Store, a.svc.Env, a.svc.State, a.svc.Registry, a.svc.Linker)
+	a.svc.Scanner = core.NewScanner(a.svc.Store, a.svc.Registry)
+	action := "Enabled"
+	if !enabled {
+		action = "Disabled"
+	}
+	return &OperationResult{Success: true, Message: fmt.Sprintf("%s agent %q", action, agentID)}
+}
+
+// ResetConfig resets the configuration to defaults.
+func (a *App) ResetConfig() *OperationResult {
+	cfg := model.DefaultConfig()
+	if err := config.Save(cfg); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	a.svc.Config = cfg
+	a.svc.Registry = agent.NewRegistry(cfg)
+	a.svc.Activator = core.NewActivator(a.svc.Store, a.svc.Env, a.svc.State, a.svc.Registry, a.svc.Linker)
+	a.svc.Scanner = core.NewScanner(a.svc.Store, a.svc.Registry)
+	return &OperationResult{Success: true, Message: "Configuration reset to defaults"}
+}
+
 // ReadStoreSkillContent reads the SKILL.md content from the global store.
 func (a *App) ReadStoreSkillContent(skillName string) (*SkillDetail, error) {
 	skill, err := a.svc.Store.Get(skillName)

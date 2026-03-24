@@ -51,3 +51,17 @@ export interface SkillDetail {
   path: string;
   content: string;
 }
+
+export interface AgentConfigInfo {
+  id: string;
+  skillDir: string;
+  enabled: boolean;
+  format: string;
+}
+
+export interface ConfigResponse {
+  version: number;
+  linkStrategy: string;
+  dataDir: string;
+  agents: AgentConfigInfo[];
+}

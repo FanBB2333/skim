@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import Editor from '@monaco-editor/react';
 import { api } from './wailsjs';
-import type { StatusResponse, SkillInfo, EnvInfo, AgentInfo, OperationResult, SkillRef } from './types';
+import type { StatusResponse, SkillInfo, EnvInfo, AgentInfo, OperationResult, SkillRef, ConfigResponse } from './types';
 
 type View = 'dashboard' | 'skills' | 'envs' | 'agents' | 'settings';
 
@@ -119,6 +119,9 @@ function App() {
   const [skillsLayout, setSkillsLayout] = useState<SkillsLayout>('list');
   const [splitAgent, setSplitAgent] = useState<string>('');
 
+  // Settings state
+  const [configData, setConfigData] = useState<ConfigResponse | null>(null);
+
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -130,16 +133,18 @@ function App() {
 
   const refresh = useCallback(async () => {
     try {
-      const [statusData, skillsData, envsData, agentsData] = await Promise.all([
+      const [statusData, skillsData, envsData, agentsData, cfgData] = await Promise.all([
         api.getStatus(),
         api.getSkills(),
         api.getEnvs(),
         api.getAgents(),
+        api.getConfig(),
       ]);
       setStatus(statusData);
       setSkills(skillsData || []);
       setEnvs(envsData || []);
       setAgents(agentsData || []);
+      setConfigData(cfgData);
       if (!selectedEnv && envsData?.length > 0) {
         setSelectedEnv(envsData[0].name);
       }
@@ -235,6 +240,18 @@ function App() {
     setTheme(id);
   };
 
+  const handleToggleAgent = async (agentID: string, enabled: boolean) => {
+    const result = await api.setAgentEnabled(agentID, enabled);
+    handleResult(result);
+    if (result.success) refresh();
+  };
+
+  const handleResetConfig = async () => {
+    const result = await api.resetConfig();
+    handleResult(result);
+    if (result.success) refresh();
+  };
+
   const currentEnv = envs.find(e => e.name === selectedEnv);
 
   if (loading) {
@@ -278,7 +295,7 @@ function App() {
           <EnvsView envs={envs} skills={skills} selectedEnv={selectedEnv} onSelectEnv={setSelectedEnv} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} onToggleSkill={handleToggleSkill} />
         )}
         {view === 'settings' && (
-          <SettingsView theme={theme} onThemeChange={handleThemeChange} />
+          <SettingsView theme={theme} onThemeChange={handleThemeChange} config={configData} status={status} onToggleAgent={handleToggleAgent} onResetConfig={handleResetConfig} />
         )}
         {view === 'agents' && (
           selectedAgent ? (
@@ -919,14 +936,34 @@ function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, edit
 }
 
 /* ===== Settings View ===== */
-function SettingsView({ theme, onThemeChange }: { theme: ThemeId; onThemeChange: (id: ThemeId) => void }) {
+interface SettingsViewProps {
+  theme: ThemeId;
+  onThemeChange: (id: ThemeId) => void;
+  config: ConfigResponse | null;
+  status: StatusResponse | null;
+  onToggleAgent: (agentID: string, enabled: boolean) => void;
+  onResetConfig: () => void;
+}
+
+function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onResetConfig }: SettingsViewProps) {
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const agentIcons: Record<string, string> = {
+    claude: 'C', codex: 'X', gemini: 'G', qoder: 'Q', qoderwork: 'W',
+  };
+
+  const agentNames: Record<string, string> = {
+    claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', qoder: 'Qoder', qoderwork: 'QoderWork',
+  };
+
   return (
     <>
       <div className="page-header">
         <h2>Settings</h2>
-        <p>Customize the appearance of Skim</p>
+        <p>Customize appearance, manage agents, and configure Skim</p>
       </div>
 
+      {/* Theme */}
       <div className="card">
         <div className="card-header">
           <span className="card-title">Theme</span>
@@ -949,6 +986,106 @@ function SettingsView({ theme, onThemeChange }: { theme: ThemeId; onThemeChange:
               {theme === t.id && <div className="theme-active-badge">Active</div>}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Agent Configuration */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Agent Configuration</span>
+        </div>
+        <div className="settings-section">
+          {config?.agents
+            .sort((a, b) => a.id.localeCompare(b.id))
+            .map(ag => (
+            <div key={ag.id} className="settings-agent-row">
+              <div className="settings-agent-info">
+                <div className="settings-agent-icon">{agentIcons[ag.id] || ag.id[0].toUpperCase()}</div>
+                <div className="settings-agent-detail">
+                  <div className="settings-agent-name">{agentNames[ag.id] || ag.id}</div>
+                  <div className="settings-agent-path">{ag.skillDir}</div>
+                </div>
+                <span className={`badge ${ag.format === 'gemini' ? 'badge-info' : 'badge-success'}`}>{ag.format}</span>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={ag.enabled}
+                  onChange={() => onToggleAgent(ag.id, !ag.enabled)}
+                />
+                <span className="toggle-slider" />
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Storage & Data */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Storage & Data</span>
+        </div>
+        <div className="settings-section">
+          <div className="settings-info-row">
+            <span className="settings-info-label">Data Directory</span>
+            <span className="settings-info-value mono">{config?.dataDir || '~/.skim'}</span>
+          </div>
+          <div className="settings-info-row">
+            <span className="settings-info-label">Link Strategy</span>
+            <span className="settings-info-value">{config?.linkStrategy || 'copy'}</span>
+          </div>
+          <div className="settings-info-row">
+            <span className="settings-info-label">Skills in Store</span>
+            <span className="settings-info-value">{status?.storeCount ?? 0}</span>
+          </div>
+          <div className="settings-info-row">
+            <span className="settings-info-label">Environments</span>
+            <span className="settings-info-value">{status?.envCount ?? 0}</span>
+          </div>
+          <div className="settings-info-row">
+            <span className="settings-info-label">Config Version</span>
+            <span className="settings-info-value">v{config?.version ?? 1}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* About */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">About</span>
+        </div>
+        <div className="settings-section">
+          <div className="settings-info-row">
+            <span className="settings-info-label">Application</span>
+            <span className="settings-info-value">Skim — Skill Version Manager</span>
+          </div>
+          <div className="settings-info-row">
+            <span className="settings-info-label">Version</span>
+            <span className="settings-info-value">1.0.0</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="card settings-danger-card">
+        <div className="card-header">
+          <span className="card-title" style={{ color: 'var(--danger)' }}>Danger Zone</span>
+        </div>
+        <div className="settings-section">
+          <div className="settings-danger-row">
+            <div>
+              <div className="settings-danger-title">Reset Configuration</div>
+              <div className="settings-danger-desc">Reset all agent settings to defaults. This will not delete your skills or environments.</div>
+            </div>
+            {showResetConfirm ? (
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button className="btn btn-sm" onClick={() => setShowResetConfirm(false)}>Cancel</button>
+                <button className="btn btn-danger btn-sm" onClick={() => { onResetConfig(); setShowResetConfirm(false); }}>Confirm</button>
+              </div>
+            ) : (
+              <button className="btn btn-danger btn-sm" onClick={() => setShowResetConfirm(true)}>Reset</button>
+            )}
+          </div>
         </div>
       </div>
     </>
