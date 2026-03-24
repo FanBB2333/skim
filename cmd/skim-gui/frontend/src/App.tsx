@@ -414,6 +414,43 @@ function DashboardView({ status, envs, onActivate, onDeactivate, onScan, onAgent
 
       <div className="card">
         <div className="card-header">
+          <span className="card-title">Supported Agent Frameworks</span>
+        </div>
+        <div className="frameworks-grid">
+          {[
+            { id: 'claude', name: 'Claude Code', desc: 'Anthropic', dir: '~/.claude/skills', format: 'standard' },
+            { id: 'codex', name: 'Codex', desc: 'OpenAI', dir: '~/.codex/skills', format: 'standard' },
+            { id: 'gemini', name: 'Gemini CLI', desc: 'Google', dir: '~/.gemini', format: 'gemini' },
+            { id: 'antigravity', name: 'Antigravity', desc: 'Google', dir: '~/.gemini/antigravity/skills', format: 'standard' },
+            { id: 'openclaw', name: 'OpenClaw', desc: 'Community', dir: '~/.openclaw/skills', format: 'standard' },
+            { id: 'qoder', name: 'Qoder', desc: 'Community', dir: '~/.qoder/skills', format: 'standard' },
+            { id: 'qoderwork', name: 'QoderWork', desc: 'Community', dir: '~/.qoderwork/skills', format: 'standard' },
+          ].map(fw => {
+            const agent = status?.agents?.find(a => a.id === fw.id);
+            return (
+              <div key={fw.id} className="framework-card">
+                <div className="framework-header">
+                  <div className={`framework-icon framework-icon-${agent?.available ? 'active' : 'inactive'}`}>{fw.id[0].toUpperCase()}</div>
+                  <div className="framework-info">
+                    <div className="framework-name">{fw.name}</div>
+                    <div className="framework-org">{fw.desc}</div>
+                  </div>
+                  <span className={`badge ${agent?.available ? 'badge-success' : 'badge-danger'}`}>
+                    {agent?.available ? 'Installed' : 'Not Found'}
+                  </span>
+                </div>
+                <div className="framework-meta">
+                  <span className="framework-dir">{fw.dir}</span>
+                  <span className={`badge ${fw.format === 'gemini' ? 'badge-info' : 'badge-warning'}`}>{fw.format === 'gemini' ? 'GEMINI.md' : 'SKILL.md'}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
           <span className="card-title">Active Environment</span>
           <div style={{ display: 'flex', gap: '6px' }}>
             <button className="btn btn-secondary btn-sm" onClick={onScan}>Scan Agents</button>

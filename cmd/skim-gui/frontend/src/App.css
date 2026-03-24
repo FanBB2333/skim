@@ -187,6 +187,89 @@ body {
   margin-top: 2px;
 }
 
+/* Frameworks Grid */
+.frameworks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.framework-card {
+  padding: 14px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  transition: all 0.12s ease;
+}
+
+.framework-card:hover {
+  border-color: var(--border);
+  background: rgba(155, 142, 126, 0.03);
+}
+
+.framework-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.framework-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.framework-icon-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.framework-icon-inactive {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.framework-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.framework-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.framework-org {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+.framework-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.framework-dir {
+  font-size: 11px;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
