@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import Editor from '@monaco-editor/react';
 import { api } from './wailsjs';
 import type { StatusResponse, SkillInfo, EnvInfo, AgentInfo, OperationResult, SkillRef } from './types';
@@ -29,6 +29,8 @@ function App() {
   const [editorContent, setEditorContent] = useState<string>('');
   const [editorPath, setEditorPath] = useState<string>('');
   const [editorDirty, setEditorDirty] = useState(false);
+  const [skillLoading, setSkillLoading] = useState(false);
+  const [skillLoadError, setSkillLoadError] = useState<string | null>(null);
 
   // Skills layout
   const [skillsLayout, setSkillsLayout] = useState<SkillsLayout>('list');
@@ -117,14 +119,24 @@ function App() {
   };
 
   const openSkillEditor = async (agentID: string, skillName: string) => {
+    // Immediately show editor panel with loading state
+    setEditingSkill(skillName);
+    setSkillLoading(true);
+    setSkillLoadError(null);
+    setEditorContent('');
+    setEditorPath('');
+    setEditorDirty(false);
+    
     try {
       const detail = await api.readSkillContent(agentID, skillName);
-      setEditingSkill(skillName);
       setEditorContent(detail.content);
       setEditorPath(detail.path);
-      setEditorDirty(false);
     } catch (err) {
-      showToast(`Failed to load: ${err}`, 'error');
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setSkillLoadError(errorMsg);
+      showToast(`Failed to load: ${errorMsg}`, 'error');
+    } finally {
+      setSkillLoading(false);
     }
   };
 
@@ -174,7 +186,7 @@ function App() {
           <SkillsView skills={skills} envs={envs} agents={agents} selectedEnv={selectedEnv} currentEnv={currentEnv} onSelectEnv={setSelectedEnv} onToggleSkill={handleToggleSkill} layout={skillsLayout} onLayoutChange={setSkillsLayout} splitAgent={splitAgent} onSplitAgentChange={setSplitAgent} />
         )}
         {view === 'envs' && (
-          <EnvsView envs={envs} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} />
+          <EnvsView envs={envs} skills={skills} selectedEnv={selectedEnv} onSelectEnv={setSelectedEnv} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} onToggleSkill={handleToggleSkill} />
         )}
         {view === 'agents' && (
           selectedAgent ? (
@@ -185,6 +197,8 @@ function App() {
               editorContent={editorContent}
               editorPath={editorPath}
               editorDirty={editorDirty}
+              skillLoading={skillLoading}
+              skillLoadError={skillLoadError}
               onBack={() => { setSelectedAgent(null); setEditingSkill(null); }}
               onSkillClick={(name) => openSkillEditor(selectedAgent.id, name)}
               onEditorChange={(v) => { setEditorContent(v || ''); setEditorDirty(true); }}
@@ -197,6 +211,46 @@ function App() {
       </main>
 
       {toast && <div className={`toast toast-${toast.type}`}>{toast.message}</div>}
+    </div>
+  );
+}
+
+/* ===== Custom Dropdown ===== */
+function CustomSelect({ value, placeholder, options, onChange }: {
+  value: string;
+  placeholder: string;
+  options: { value: string; label: ReactNode }[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div className="custom-select" ref={ref}>
+      <div className={`custom-select-trigger ${open ? 'open' : ''}`} onClick={() => setOpen(!open)}>
+        <span className={selected ? '' : 'custom-select-placeholder'}>{selected ? selected.label : placeholder}</span>
+        <svg className={`custom-select-arrow ${open ? 'open' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 4.5L6 7.5L9 4.5" /></svg>
+      </div>
+      {open && (
+        <div className="custom-select-menu">
+          {options.map(opt => (
+            <div key={opt.value} className={`custom-select-option ${opt.value === value ? 'selected' : ''}`} onClick={() => { onChange(opt.value); setOpen(false); }}>
+              {opt.label}
+              {opt.value === value && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -278,10 +332,12 @@ function DashboardView({ status, envs, onActivate, onDeactivate, onScan, onAgent
             <p>Select an environment to activate and deploy skills.</p>
             {envs.length > 0 && (
               <div style={{ marginTop: '12px' }}>
-                <select className="input" style={{ width: 'auto', display: 'inline-block' }} defaultValue="" onChange={(e) => e.target.value && onActivate(e.target.value)}>
-                  <option value="" disabled>Select environment...</option>
-                  {envs.map(env => <option key={env.name} value={env.name}>{env.name}</option>)}
-                </select>
+                <CustomSelect
+                  value=""
+                  placeholder="Select environment..."
+                  options={envs.map(env => ({ value: env.name, label: env.name }))}
+                  onChange={(v) => v && onActivate(v)}
+                />
               </div>
             )}
           </div>
@@ -474,52 +530,153 @@ function SplitSkillsView({ skills, agents, currentEnv, selectedEnv, splitAgent, 
 /* ===== Environments View ===== */
 interface EnvsViewProps {
   envs: EnvInfo[];
+  skills: SkillInfo[];
+  selectedEnv: string;
+  onSelectEnv: (name: string) => void;
   newEnvName: string;
   onNewEnvNameChange: (name: string) => void;
   onCreateEnv: () => void;
   onRemoveEnv: (name: string) => void;
   onActivate: (name: string) => void;
   onDeactivate: () => void;
+  onToggleSkill: (skillName: string, enabled: boolean) => void;
 }
 
-function EnvsView({ envs, newEnvName, onNewEnvNameChange, onCreateEnv, onRemoveEnv, onActivate, onDeactivate }: EnvsViewProps) {
+function EnvsView({ envs, skills, selectedEnv, onSelectEnv, newEnvName, onNewEnvNameChange, onCreateEnv, onRemoveEnv, onActivate, onDeactivate, onToggleSkill }: EnvsViewProps) {
+  const currentEnv = envs.find(e => e.name === selectedEnv);
+  const envSkills = currentEnv?.skills || [];
+  const availableSkills = skills.filter(s => !envSkills.includes(s.name));
+
+  // Auto-select first environment if none selected
+  useEffect(() => {
+    if (!selectedEnv && envs.length > 0) {
+      onSelectEnv(envs[0].name);
+    }
+  }, [selectedEnv, envs, onSelectEnv]);
+
+  const getSkillInfo = (skillName: string): SkillInfo | undefined => {
+    return skills.find(s => s.name === skillName);
+  };
+
   return (
     <>
       <div className="page-header"><h2>Environments</h2><p>Create and manage skill environments</p></div>
-      <div className="card">
-        <div className="card-header"><span className="card-title">Create Environment</span></div>
-        <div className="input-group">
-          <input type="text" className="input" placeholder="Environment name..." value={newEnvName} onChange={(e) => onNewEnvNameChange(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && onCreateEnv()} />
-          <button className="btn btn-primary" onClick={onCreateEnv}>Create</button>
-        </div>
+
+      {/* Create Environment */}
+      <div className="env-create-bar">
+        <input type="text" className="input" placeholder="New environment name..." value={newEnvName} onChange={(e) => onNewEnvNameChange(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && onCreateEnv()} />
+        <button className="btn btn-primary" onClick={onCreateEnv}>Create Environment</button>
       </div>
-      <div className="card">
-        <div className="card-header"><span className="card-title">Environments ({envs.length})</span></div>
-        {envs.length === 0 ? (
+
+      {envs.length === 0 ? (
+        <div className="card">
           <div className="empty-state"><h3>No Environments</h3><p>Create an environment to group skills together.</p></div>
-        ) : (
-          <div className="list">
-            {envs.map(env => (
-              <div key={env.name} className="list-item">
-                <div className="list-item-content">
-                  <div className="list-item-title">{env.name}{env.active && <span className="badge badge-success" style={{ marginLeft: '8px' }}>Active</span>}</div>
-                  <div className="list-item-subtitle">{env.skills?.length || 0} skill(s): {env.skills?.join(', ') || 'none'}</div>
+        </div>
+      ) : (
+        <div className="env-split-pane">
+          {/* Environment List - Left Panel */}
+          <div className="env-list-panel">
+            <div className="env-list-header">Environments ({envs.length})</div>
+            <div className="env-list">
+              {envs.map(env => (
+                <div
+                  key={env.name}
+                  className={`env-list-item ${selectedEnv === env.name ? 'selected' : ''} ${env.active ? 'active-env' : ''}`}
+                  onClick={() => onSelectEnv(env.name)}
+                >
+                  <div className="env-list-item-content">
+                    <div className="env-list-item-name">
+                      {env.name}
+                      {env.active && <span className="env-active-dot" title="Active" />}
+                    </div>
+                    <div className="env-list-item-meta">{env.skills?.length || 0} skill(s)</div>
+                  </div>
                 </div>
-                <div className="list-item-actions">
-                  {env.active ? (
-                    <button className="btn btn-danger btn-sm" onClick={onDeactivate}>Deactivate</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Environment Detail - Right Panel */}
+          <div className="env-detail-panel">
+            {currentEnv ? (
+              <>
+                {/* Header */}
+                <div className="env-detail-header">
+                  <div className="env-detail-title">
+                    <h3>{currentEnv.name}</h3>
+                    {currentEnv.active && <span className="badge badge-success">Active</span>}
+                  </div>
+                  <div className="env-detail-actions">
+                    {currentEnv.active ? (
+                      <button className="btn btn-danger btn-sm" onClick={onDeactivate}>Deactivate</button>
+                    ) : (
+                      <>
+                        <button className="btn btn-success btn-sm" onClick={() => onActivate(currentEnv.name)}>Activate</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => onRemoveEnv(currentEnv.name)}>Delete</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Installed Skills */}
+                <div className="env-detail-section">
+                  <div className="env-detail-section-header">
+                    <span className="env-detail-section-title">Installed Skills ({envSkills.length})</span>
+                  </div>
+                  {envSkills.length === 0 ? (
+                    <div className="env-detail-empty">No skills in this environment. Add skills from the available list below.</div>
                   ) : (
-                    <>
-                      <button className="btn btn-success btn-sm" onClick={() => onActivate(env.name)}>Activate</button>
-                      <button className="btn btn-secondary btn-sm" onClick={() => onRemoveEnv(env.name)}>Remove</button>
-                    </>
+                    <div className="env-skills-list">
+                      {envSkills.map(skillName => {
+                        const skillInfo = getSkillInfo(skillName);
+                        return (
+                          <div key={skillName} className="env-skill-item">
+                            <div className="env-skill-info">
+                              <div className="env-skill-name">{skillName}</div>
+                              <div className="env-skill-meta">
+                                {skillInfo?.description || 'No description'}
+                                {skillInfo?.version && <span className="env-skill-version">v{skillInfo.version}</span>}
+                              </div>
+                            </div>
+                            <button className="btn btn-secondary btn-sm" onClick={() => onToggleSkill(skillName, true)}>Remove</button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+
+                {/* Available Skills to Add */}
+                <div className="env-detail-section">
+                  <div className="env-detail-section-header">
+                    <span className="env-detail-section-title">Available Skills ({availableSkills.length})</span>
+                  </div>
+                  {availableSkills.length === 0 ? (
+                    <div className="env-detail-empty">All skills from the store are already in this environment.</div>
+                  ) : (
+                    <div className="env-skills-list">
+                      {availableSkills.map(skill => (
+                        <div key={skill.name} className="env-skill-item env-skill-available">
+                          <div className="env-skill-info">
+                            <div className="env-skill-name">{skill.name}</div>
+                            <div className="env-skill-meta">
+                              {skill.description || 'No description'}
+                              {skill.version && <span className="env-skill-version">v{skill.version}</span>}
+                            </div>
+                          </div>
+                          <button className="btn btn-primary btn-sm" onClick={() => onToggleSkill(skill.name, false)}>Add</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="env-detail-empty-state">Select an environment to view details</div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 }
@@ -563,13 +720,15 @@ interface AgentDetailViewProps {
   editorContent: string;
   editorPath: string;
   editorDirty: boolean;
+  skillLoading: boolean;
+  skillLoadError: string | null;
   onBack: () => void;
   onSkillClick: (name: string) => void;
   onEditorChange: (value: string | undefined) => void;
   onSave: () => void;
 }
 
-function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, onBack, onSkillClick, onEditorChange, onSave }: AgentDetailViewProps) {
+function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, skillLoading, skillLoadError, onBack, onSkillClick, onEditorChange, onSave }: AgentDetailViewProps) {
   const editorRef = useRef<unknown>(null);
 
   return (
@@ -608,30 +767,42 @@ function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, edit
       {editingSkill && (
         <div className="editor-panel">
           <div className="editor-header">
-            <div className="editor-title">{editorPath}</div>
+            <div className="editor-title">{skillLoading ? `Loading ${editingSkill}...` : editorPath}</div>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               {editorDirty && <span className="badge badge-warning">Unsaved</span>}
-              <button className="btn btn-primary btn-sm" onClick={onSave} disabled={!editorDirty}>Save</button>
+              <button className="btn btn-primary btn-sm" onClick={onSave} disabled={!editorDirty || skillLoading}>Save</button>
             </div>
           </div>
           <div className="editor-container">
-            <Editor
-              height="100%"
-              defaultLanguage="markdown"
-              value={editorContent}
-              onChange={onEditorChange}
-              onMount={(editor) => { editorRef.current = editor; }}
-              theme="vs-light"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 13,
-                lineNumbers: 'on',
-                wordWrap: 'on',
-                scrollBeyondLastLine: false,
-                padding: { top: 12 },
-                renderLineHighlight: 'gutter',
-              }}
-            />
+            {skillLoading ? (
+              <div className="editor-loading">
+                <div className="spinner" />
+                <p>Loading skill content...</p>
+              </div>
+            ) : skillLoadError ? (
+              <div className="editor-error">
+                <p>Failed to load skill content</p>
+                <p className="error-detail">{skillLoadError}</p>
+              </div>
+            ) : (
+              <Editor
+                height="100%"
+                defaultLanguage="markdown"
+                value={editorContent}
+                onChange={onEditorChange}
+                onMount={(editor) => { editorRef.current = editor; }}
+                theme="vs-light"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  lineNumbers: 'on',
+                  wordWrap: 'on',
+                  scrollBeyondLastLine: false,
+                  padding: { top: 12 },
+                  renderLineHighlight: 'gutter',
+                }}
+              />
+            )}
           </div>
         </div>
       )}

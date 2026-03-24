@@ -56,3 +56,5 @@ cmd/skim-gui/build/bin/
 # Frontend artifacts
 node_modules/
 cmd/skim-gui/frontend/dist/
+
+.claude/
