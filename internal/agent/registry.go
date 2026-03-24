@@ -61,6 +61,7 @@ func agentDisplayName(id string) string {
 		"codex":     "Codex",
 		"qoder":     "Qoder",
 		"qoderwork": "QoderWork",
+		"openclaw":  "OpenClaw",
 	}
 	if n, ok := names[id]; ok {
 		return n

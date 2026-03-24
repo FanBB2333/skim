@@ -949,11 +949,11 @@ function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onR
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const agentIcons: Record<string, string> = {
-    claude: 'C', codex: 'X', gemini: 'G', qoder: 'Q', qoderwork: 'W',
+    claude: 'C', codex: 'X', gemini: 'G', qoder: 'Q', qoderwork: 'W', openclaw: 'O',
   };
 
   const agentNames: Record<string, string> = {
-    claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', qoder: 'Qoder', qoderwork: 'QoderWork',
+    claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', qoder: 'Qoder', qoderwork: 'QoderWork', openclaw: 'OpenClaw',
   };
 
   return (
