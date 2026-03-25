@@ -396,6 +396,7 @@ function App() {
 
   return (
     <div className="app">
+      <div className="titlebar-drag-region" />
       <aside className="sidebar">
         <div className="sidebar-header">
           <h1>Skim</h1>

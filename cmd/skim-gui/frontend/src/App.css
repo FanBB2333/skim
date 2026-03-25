@@ -40,6 +40,18 @@ body {
   overflow: hidden;
 }
 
+/* Draggable region for window movement (macOS transparent titlebar) */
+.titlebar-drag-region {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  z-index: 100;
+  --wails-draggable: drag;
+  -webkit-app-region: drag;
+}
+
 /* Sidebar - fixed, no scroll with content */
 .sidebar {
   width: 220px;
