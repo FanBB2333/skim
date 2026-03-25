@@ -192,6 +192,8 @@ function App() {
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [showAbout, setShowAbout] = useState(false);
+  const [appVersion, setAppVersion] = useState('dev');
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -229,6 +231,7 @@ function App() {
   useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { applyUIPrefs(fontFamily, fontSize); }, [fontFamily, fontSize]);
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { api.getVersion().then(v => setAppVersion(v)).catch(() => {}); }, []);
 
   const handleActivate = async (envName: string) => {
     handleResult(await api.activate(envName));
@@ -398,8 +401,11 @@ function App() {
     <div className="app">
       <div className="titlebar-drag-region" />
       <aside className="sidebar">
-        <div className="sidebar-header">
-          <h1>Skim</h1>
+        <div className="sidebar-header" onClick={() => setShowAbout(true)} style={{ cursor: 'pointer' }}>
+          <div className="sidebar-header-title-row">
+            <h1>Skim</h1>
+            <span className="sidebar-version-badge">v{appVersion}</span>
+          </div>
           <p>Skill Version Manager</p>
         </div>
         <nav className="sidebar-nav">
@@ -432,7 +438,7 @@ function App() {
           <EnvsView envs={envs} skills={skills} selectedEnv={selectedEnv} onSelectEnv={setSelectedEnv} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} onToggleSkill={handleToggleSkill} />
         )}
         {view === 'settings' && (
-          <SettingsView theme={theme} onThemeChange={handleThemeChange} config={configData} status={status} onToggleAgent={handleToggleAgent} onResetConfig={handleResetConfig} onSetLinkStrategy={async (s) => { handleResult(await api.setLinkStrategy(s)); refresh(); }} fontFamily={fontFamily} onFontFamilyChange={handleFontFamilyChange} fontSize={fontSize} onFontSizeChange={handleFontSizeChange} />
+          <SettingsView theme={theme} onThemeChange={handleThemeChange} config={configData} status={status} onToggleAgent={handleToggleAgent} onResetConfig={handleResetConfig} onSetLinkStrategy={async (s) => { handleResult(await api.setLinkStrategy(s)); refresh(); }} fontFamily={fontFamily} onFontFamilyChange={handleFontFamilyChange} fontSize={fontSize} onFontSizeChange={handleFontSizeChange} appVersion={appVersion} />
         )}
         {view === 'agents' && (
           selectedAgent ? (
@@ -461,6 +467,24 @@ function App() {
 
       {toast && <div className={`toast toast-${toast.type}`}>{toast.message}</div>}
       {contextMenu && <ContextMenu menu={contextMenu} onClose={() => setContextMenu(null)} />}
+
+      {showAbout && (
+        <div className="about-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAbout(false); }}>
+          <div className="about-dialog">
+            <div className="about-header">
+              <h2>Skim</h2>
+              <button className="about-close" onClick={() => setShowAbout(false)}>&times;</button>
+            </div>
+            <p className="about-tagline">Skill Version Manager for Coding Agents</p>
+            <div className="about-version">v{appVersion}</div>
+            <p className="about-desc">Manage skills across Claude, Codex, Gemini, Qoder, and QoderWork.</p>
+            <button className="about-github" onClick={() => window.open('https://github.com/FanBB2333/skim', '_blank')}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+              GitHub
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1301,9 +1325,10 @@ interface SettingsViewProps {
   onFontFamilyChange: (ff: FontFamily) => void;
   fontSize: number;
   onFontSizeChange: (size: number) => void;
+  appVersion: string;
 }
 
-function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onResetConfig, onSetLinkStrategy, fontFamily, onFontFamilyChange, fontSize, onFontSizeChange }: SettingsViewProps) {
+function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onResetConfig, onSetLinkStrategy, fontFamily, onFontFamilyChange, fontSize, onFontSizeChange, appVersion }: SettingsViewProps) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const agentIcons: Record<string, string> = {
@@ -1446,7 +1471,7 @@ function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onR
           </div>
           <div className="settings-info-row">
             <span className="settings-info-label">Version</span>
-            <span className="settings-info-value">1.0.0</span>
+            <span className="settings-info-value">{appVersion}</span>
           </div>
         </div>
       </div>

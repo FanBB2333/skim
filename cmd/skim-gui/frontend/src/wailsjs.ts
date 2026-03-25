@@ -5,6 +5,7 @@ declare global {
     go: {
       api: {
         App: {
+          GetVersion: () => Promise<string>;
           GetStatus: () => Promise<StatusResponse>;
           GetSkills: () => Promise<SkillInfo[]>;
           GetEnvs: () => Promise<EnvInfo[]>;
@@ -34,6 +35,7 @@ declare global {
 }
 
 export const api = {
+  getVersion: () => window.go.api.App.GetVersion(),
   getStatus: () => window.go.api.App.GetStatus(),
   getSkills: () => window.go.api.App.GetSkills(),
   getEnvs: () => window.go.api.App.GetEnvs(),

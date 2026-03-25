@@ -3,14 +3,16 @@
 BINARY := skim
 BUILD_DIR := ./cmd/skim
 GUI_DIR := ./cmd/skim-gui
+VERSION := $(shell cat VERSION)
+LDFLAGS := -ldflags "-X github.com/FanBB2333/skim/pkg/api.Version=$(VERSION)"
 
 # Build CLI only
 build:
-	go build -o $(BINARY) $(BUILD_DIR)
+	go build $(LDFLAGS) -o $(BINARY) $(BUILD_DIR)
 
 # Build GUI (requires Wails)
 build-gui:
-	cd $(GUI_DIR) && wails build
+	cd $(GUI_DIR) && wails build -ldflags "-X github.com/FanBB2333/skim/pkg/api.Version=$(VERSION)"
 
 # Build both CLI and GUI
 build-all: build build-gui

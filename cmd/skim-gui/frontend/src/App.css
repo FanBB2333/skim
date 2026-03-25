@@ -71,6 +71,8 @@ body {
 .sidebar-header {
   padding: 20px 20px 16px;
   border-bottom: 1px solid var(--border);
+  --wails-draggable: no-drag;
+  -webkit-app-region: no-drag;
 }
 
 .sidebar-header h1 {
@@ -86,6 +88,129 @@ body {
   margin-top: 3px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.sidebar-header-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sidebar-version-badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.3px;
+}
+
+/* About Dialog */
+.about-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.about-dialog {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 28px 32px;
+  width: 320px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-light);
+}
+
+.about-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.about-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent-active);
+  letter-spacing: -0.3px;
+}
+
+.about-close {
+  position: absolute;
+  right: -8px;
+  top: -4px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  font-size: 18px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-close:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.about-tagline {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.about-version {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--bg-secondary);
+  padding: 4px 14px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.about-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+
+.about-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.about-github:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
 }
 
 .sidebar-nav {

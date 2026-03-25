@@ -13,6 +13,9 @@ import (
 	"github.com/FanBB2333/skim/internal/model"
 )
 
+// Version is set at build time via -ldflags.
+var Version = "dev"
+
 // App is the API binding for the Wails frontend.
 type App struct {
 	ctx context.Context
@@ -32,6 +35,11 @@ func (a *App) Startup(ctx context.Context) {
 		return
 	}
 	a.svc = core.NewService(cfg)
+}
+
+// GetVersion returns the application version.
+func (a *App) GetVersion() string {
+	return Version
 }
 
 // Status response types
