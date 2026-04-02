@@ -1221,6 +1221,13 @@ interface AgentDetailViewProps {
 function AgentDetailView({ agent, agentSkills, editingSkill, editorContent, editorPath, editorDirty, editorTheme, skillLoading, skillLoadError, onBack, onSkillClick, onEditorChange, onSave, onCloseEditor, onSkillContextMenu }: AgentDetailViewProps) {
   const editorRef = useRef<unknown>(null);
 
+  useEffect(() => {
+    if (!editingSkill) return;
+    const keyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseEditor(); };
+    document.addEventListener('keydown', keyHandler);
+    return () => { document.removeEventListener('keydown', keyHandler); };
+  }, [editingSkill, onCloseEditor]);
+
   return (
     <>
       <div className="back-btn" onClick={onBack}><IconBack /> Back to Agents</div>
