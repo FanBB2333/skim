@@ -34,7 +34,7 @@ Add a skill from a local path to the global store.
 **Example:**
 
 ```bash
-skim add ./my-custom-skill
+skim add ./examples/demo-skill
 ```
 
 ### skim install
@@ -54,7 +54,7 @@ Add a skill to the global store and install it to one specific agent via symlink
 **Example:**
 
 ```bash
-skim install -t qoder ./my-custom-skill
+skim install -t qoder ./examples/demo-skill
 ```
 
 ### skim status

@@ -36,15 +36,15 @@ skim init
 # Inspect the base environment snapshot created from current agents
 skim env list
 
-# Add a new skill to the store
-skim add ./my-skill
+# Add the bundled example skill to the store
+skim add ./examples/demo-skill
 
 # Install directly to one agent
-skim install -t qoder ./my-skill
+skim install -t qoder ./examples/demo-skill
 
 # Create an environment and add skills
 skim env create work
-skim skill enable my-skill --env work
+skim skill enable demo-skill --env work
 
 # Activate
 skim activate work

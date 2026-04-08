@@ -62,13 +62,13 @@ If your agents already had skills installed, `skim init` has already imported th
 Add a skill to the global store:
 
 ```bash
-skim add ./my-custom-skill
+skim add ./examples/demo-skill
 ```
 
 Install a skill directly to one target agent:
 
 ```bash
-skim install -t qoder ./my-custom-skill
+skim install -t qoder ./examples/demo-skill
 ```
 
 `skim install` adds the skill to the store first, then installs it to the target agent via symlink.
