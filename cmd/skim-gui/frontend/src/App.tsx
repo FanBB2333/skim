@@ -1387,11 +1387,16 @@ function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onR
         <div className="settings-section">
           <div className="settings-info-row">
             <span className="settings-info-label">Font Family</span>
-            <select className="settings-select" value={fontFamily} onChange={(e) => onFontFamilyChange(e.target.value as FontFamily)}>
-              <option value="system">System (Sans-serif)</option>
-              <option value="serif">Serif (Georgia)</option>
-              <option value="mono">Monospace (SF Mono)</option>
-            </select>
+            <CustomSelect
+              value={fontFamily}
+              placeholder="Select font family..."
+              options={[
+                { value: 'system', label: 'System (Sans-serif)' },
+                { value: 'serif', label: 'Serif (Georgia)' },
+                { value: 'mono', label: 'Monospace (SF Mono)' },
+              ]}
+              onChange={(v) => onFontFamilyChange(v as FontFamily)}
+            />
           </div>
           <div className="settings-info-row">
             <span className="settings-info-label">Font Size</span>
