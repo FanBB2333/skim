@@ -37,7 +37,7 @@ After installation, run the init command to set up skim:
 skim init
 ```
 
-This creates the skim directory structure at `~/.skim/`:
+This creates the skim directory structure at `~/.skim/` and a `base` environment snapshot from your currently installed agent skills:
 
 ```
 ~/.skim/
@@ -47,15 +47,31 @@ This creates the skim directory structure at `~/.skim/`:
 └── state.yaml     # Current state (active env, etc.)
 ```
 
-## Importing Existing Skills
+## Base Snapshot Environment
 
-If you already have skills installed in your agents, scan them into the global store:
+Right after initialization, inspect the generated `base` environment:
 
 ```bash
-skim agent scan
+skim env list
 ```
 
-This discovers and imports all existing skills from your installed agents.
+If your agents already had skills installed, `skim init` has already imported them into the global store and recorded the snapshot in `base`.
+
+## Adding and Installing Skills
+
+Add a skill to the global store:
+
+```bash
+skim add ./my-custom-skill
+```
+
+Install a skill directly to one target agent:
+
+```bash
+skim install -t qoder ./my-custom-skill
+```
+
+`skim install` adds the skill to the store first, then installs it to the target agent via symlink.
 
 ## Verifying Installation
 

@@ -30,6 +30,8 @@ func NewRootCmd() *cobra.Command {
 
 	root.AddCommand(newStatusCmd())
 	root.AddCommand(newEnvCmd())
+	root.AddCommand(newAddCmd())
+	root.AddCommand(newInstallCmd())
 	root.AddCommand(newActivateCmd())
 	root.AddCommand(newDeactivateCmd())
 	root.AddCommand(newSkillCmd())

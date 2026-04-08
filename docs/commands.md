@@ -18,7 +18,44 @@ Root command. Run with no arguments to see help.
 skim init
 ```
 
-Initialize skim configuration. Creates the `~/.skim/` directory structure and default configuration file.
+Initialize skim configuration. Creates the `~/.skim/` directory structure, default configuration file, and a `base` environment snapshot from currently available agent skills.
+
+### skim add
+
+```
+skim add <path>
+```
+
+Add a skill from a local path to the global store.
+
+**Arguments:**
+- `path` — Path to the skill directory
+
+**Example:**
+
+```bash
+skim add ./my-custom-skill
+```
+
+### skim install
+
+```
+skim install -t <agent> <path>
+```
+
+Add a skill to the global store and install it to one specific agent via symlink.
+
+**Arguments:**
+- `path` — Path to the skill directory
+
+**Flags:**
+- `-t, --target` — Target agent ID such as `qoder`, `codex`, or `claude`
+
+**Example:**
+
+```bash
+skim install -t qoder ./my-custom-skill
+```
 
 ### skim status
 

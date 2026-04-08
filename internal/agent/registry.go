@@ -17,14 +17,7 @@ func NewRegistry(cfg model.Config) *Registry {
 		if !ac.Enabled {
 			continue
 		}
-		dir := config.ExpandHome(ac.SkillDir)
-		switch ac.Format {
-		case "gemini":
-			agents = append(agents, NewGeminiAgent(dir))
-		default:
-			name := agentDisplayName(id)
-			agents = append(agents, NewStandardAgent(name, id, dir))
-		}
+		agents = append(agents, NewAgentFromConfig(id, ac))
 	}
 	return &Registry{agents: agents}
 }
@@ -57,15 +50,27 @@ func (r *Registry) Get(id string) Agent {
 
 func agentDisplayName(id string) string {
 	names := map[string]string{
-		"claude":    "Claude Code",
-		"codex":     "Codex",
-		"qoder":     "Qoder",
-		"qoderwork": "QoderWork",
-		"openclaw":     "OpenClaw",
+		"claude":      "Claude Code",
+		"codex":       "Codex",
+		"qoder":       "Qoder",
+		"qoderwork":   "QoderWork",
+		"openclaw":    "OpenClaw",
 		"antigravity": "Antigravity",
 	}
 	if n, ok := names[id]; ok {
 		return n
 	}
 	return id
+}
+
+// NewAgentFromConfig creates an agent instance from config without checking Enabled.
+func NewAgentFromConfig(id string, ac model.AgentConfig) Agent {
+	dir := config.ExpandHome(ac.SkillDir)
+	switch ac.Format {
+	case "gemini":
+		return NewGeminiAgent(dir)
+	default:
+		name := agentDisplayName(id)
+		return NewStandardAgent(name, id, dir)
+	}
 }

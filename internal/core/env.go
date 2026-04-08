@@ -73,11 +73,36 @@ func (e *EnvManager) Create(name string) error {
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("environment %q already exists", name)
 	}
-	env := model.Environment{
+	return e.save(model.Environment{
 		Name:   name,
 		Skills: []string{},
+	})
+}
+
+// CreateWithSkills creates a new environment pre-populated with skills.
+func (e *EnvManager) CreateWithSkills(name string, skills []string) error {
+	path := e.envPath(name)
+	if _, err := os.Stat(path); err == nil {
+		return fmt.Errorf("environment %q already exists", name)
 	}
-	return e.save(env)
+
+	uniq := make([]string, 0, len(skills))
+	seen := make(map[string]struct{}, len(skills))
+	for _, skill := range skills {
+		if skill == "" {
+			continue
+		}
+		if _, ok := seen[skill]; ok {
+			continue
+		}
+		seen[skill] = struct{}{}
+		uniq = append(uniq, skill)
+	}
+
+	return e.save(model.Environment{
+		Name:   name,
+		Skills: uniq,
+	})
 }
 
 // Remove deletes an environment.

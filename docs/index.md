@@ -33,8 +33,14 @@ go install github.com/FanBB2333/skim/cmd/skim@latest
 # Initialize
 skim init
 
-# Scan existing skills from installed agents
-skim agent scan
+# Inspect the base environment snapshot created from current agents
+skim env list
+
+# Add a new skill to the store
+skim add ./my-skill
+
+# Install directly to one agent
+skim install -t qoder ./my-skill
 
 # Create an environment and add skills
 skim env create work

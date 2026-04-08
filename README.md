@@ -28,8 +28,14 @@ make install
 # Initialize skim
 skim init
 
-# Scan existing skills from installed agents
-skim agent scan
+# See the base environment snapshot created from current agents
+skim env list
+
+# Add a skill to the global store
+skim add ./my-skill
+
+# Install one skill to a specific agent
+skim install -t qoder ./my-skill
 
 # Create an environment
 skim env create work
@@ -47,6 +53,8 @@ skim activate work
 |---------|-------------|
 | `skim status` | Show current status |
 | `skim init` | Initialize skim configuration |
+| `skim add <path>` | Add a skill from local path to the global store |
+| `skim install -t <agent> <path>` | Add to the store and install to one target agent |
 | `skim env list` | List all environments |
 | `skim env create <name>` | Create a new environment |
 | `skim env remove <name>` | Remove an environment |
