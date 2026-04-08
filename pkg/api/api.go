@@ -9,7 +9,7 @@ import (
 	"github.com/FanBB2333/skim/internal/agent"
 	"github.com/FanBB2333/skim/internal/config"
 	"github.com/FanBB2333/skim/internal/core"
-	_ "github.com/FanBB2333/skim/internal/linker" // ensure linker package is available
+	"github.com/FanBB2333/skim/internal/linker"
 	"github.com/FanBB2333/skim/internal/model"
 )
 
@@ -259,6 +259,41 @@ func (a *App) Deactivate() *OperationResult {
 	}
 }
 
+// Initialize ensures skim is ready and creates the base snapshot environment if needed.
+func (a *App) Initialize() *OperationResult {
+	if err := config.EnsureDirs(); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+
+	a.svc = core.NewService(cfg)
+
+	if _, err := a.svc.Env.Get("base"); err == nil {
+		return &OperationResult{Success: true, Message: "Skim is ready. The base environment already exists."}
+	}
+
+	snapshot, err := a.svc.Scanner.SnapshotAll()
+	if err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+
+	if err := a.svc.Env.CreateWithSkills("base", snapshot.Skills); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+
+	return &OperationResult{
+		Success:   true,
+		Message:   fmt.Sprintf("Created base environment with %d skill(s)", len(snapshot.Skills)),
+		Succeeded: snapshot.Imported,
+		Failed:    len(snapshot.Errors),
+		Errors:    snapshot.Errors,
+	}
+}
+
 // ScanAgents scans all agents and imports skills to the store.
 func (a *App) ScanAgents() *OperationResult {
 	result, err := a.svc.Scanner.ScanAll()
@@ -280,6 +315,18 @@ func (a *App) RemoveSkill(name string) *OperationResult {
 		return &OperationResult{Success: false, Message: err.Error()}
 	}
 	return &OperationResult{Success: true, Message: fmt.Sprintf("Removed skill %q", name)}
+}
+
+// AddSkillFromPath imports a skill folder into the global store.
+func (a *App) AddSkillFromPath(source string) *OperationResult {
+	if a.svc == nil {
+		return &OperationResult{Success: false, Message: "service not initialized"}
+	}
+	skill, err := a.svc.Store.Add(source)
+	if err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	return &OperationResult{Success: true, Message: fmt.Sprintf("Added %q to the store", skill.Name)}
 }
 
 // GetAgentSkills returns skills for a specific agent.
@@ -454,10 +501,29 @@ func (a *App) InstallSkillToAgent(agentID, skillName string) *OperationResult {
 	if err != nil {
 		return &OperationResult{Success: false, Message: fmt.Sprintf("skill %q not found in store", skillName)}
 	}
-	if err := ag.InstallSkill(*skill, a.svc.Linker); err != nil {
+	if err := ag.InstallSkill(*skill, linker.NewSymlinkLinker()); err != nil {
 		return &OperationResult{Success: false, Message: err.Error()}
 	}
-	return &OperationResult{Success: true, Message: fmt.Sprintf("Installed %q to %s", skillName, ag.Name())}
+	return &OperationResult{Success: true, Message: fmt.Sprintf("Installed %q to %s via symlink", skillName, ag.Name())}
+}
+
+// InstallSkillPathToAgent imports a skill into the store and installs it to one agent via symlink.
+func (a *App) InstallSkillPathToAgent(agentID, source string) *OperationResult {
+	if a.svc == nil {
+		return &OperationResult{Success: false, Message: "service not initialized"}
+	}
+	ag := a.svc.Registry.Get(agentID)
+	if ag == nil {
+		return &OperationResult{Success: false, Message: fmt.Sprintf("agent %q not found", agentID)}
+	}
+	skill, err := a.svc.Store.Add(source)
+	if err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	if err := ag.InstallSkill(*skill, linker.NewSymlinkLinker()); err != nil {
+		return &OperationResult{Success: false, Message: err.Error()}
+	}
+	return &OperationResult{Success: true, Message: fmt.Sprintf("Added %q to the store and installed it to %s via symlink", skill.Name, ag.Name())}
 }
 
 // RemoveSkillFromAgent removes a skill from a specific agent.

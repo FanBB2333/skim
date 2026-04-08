@@ -6,6 +6,7 @@ declare global {
       api: {
         App: {
           GetVersion: () => Promise<string>;
+          Initialize: () => Promise<OperationResult>;
           GetStatus: () => Promise<StatusResponse>;
           GetSkills: () => Promise<SkillInfo[]>;
           GetEnvs: () => Promise<EnvInfo[]>;
@@ -18,6 +19,7 @@ declare global {
           Deactivate: () => Promise<OperationResult>;
           ScanAgents: () => Promise<OperationResult>;
           RemoveSkill: (name: string) => Promise<OperationResult>;
+          AddSkillFromPath: (source: string) => Promise<OperationResult>;
           GetAgentSkills: (agentID: string) => Promise<SkillRef[]>;
           ReadSkillContent: (agentID: string, skillName: string) => Promise<SkillDetail>;
           WriteSkillContent: (agentID: string, skillName: string, content: string) => Promise<OperationResult>;
@@ -26,6 +28,7 @@ declare global {
           SetAgentEnabled: (agentID: string, enabled: boolean) => Promise<OperationResult>;
           ResetConfig: () => Promise<OperationResult>;
           InstallSkillToAgent: (agentID: string, skillName: string) => Promise<OperationResult>;
+          InstallSkillPathToAgent: (agentID: string, source: string) => Promise<OperationResult>;
           RemoveSkillFromAgent: (agentID: string, skillName: string) => Promise<OperationResult>;
           SetLinkStrategy: (strategy: string) => Promise<OperationResult>;
         };
@@ -36,6 +39,7 @@ declare global {
 
 export const api = {
   getVersion: () => window.go.api.App.GetVersion(),
+  initialize: () => window.go.api.App.Initialize(),
   getStatus: () => window.go.api.App.GetStatus(),
   getSkills: () => window.go.api.App.GetSkills(),
   getEnvs: () => window.go.api.App.GetEnvs(),
@@ -48,6 +52,7 @@ export const api = {
   deactivate: () => window.go.api.App.Deactivate(),
   scanAgents: () => window.go.api.App.ScanAgents(),
   removeSkill: (name: string) => window.go.api.App.RemoveSkill(name),
+  addSkillFromPath: (source: string) => window.go.api.App.AddSkillFromPath(source),
   getAgentSkills: (agentID: string) => window.go.api.App.GetAgentSkills(agentID),
   readSkillContent: (agentID: string, skillName: string) => window.go.api.App.ReadSkillContent(agentID, skillName),
   writeSkillContent: (agentID: string, skillName: string, content: string) => window.go.api.App.WriteSkillContent(agentID, skillName, content),
@@ -56,6 +61,7 @@ export const api = {
   setAgentEnabled: (agentID: string, enabled: boolean) => window.go.api.App.SetAgentEnabled(agentID, enabled),
   resetConfig: () => window.go.api.App.ResetConfig(),
   installSkillToAgent: (agentID: string, skillName: string) => window.go.api.App.InstallSkillToAgent(agentID, skillName),
+  installSkillPathToAgent: (agentID: string, source: string) => window.go.api.App.InstallSkillPathToAgent(agentID, source),
   removeSkillFromAgent: (agentID: string, skillName: string) => window.go.api.App.RemoveSkillFromAgent(agentID, skillName),
   setLinkStrategy: (strategy: string) => window.go.api.App.SetLinkStrategy(strategy),
 };

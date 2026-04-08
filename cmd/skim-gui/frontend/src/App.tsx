@@ -154,6 +154,16 @@ function applyUIPrefs(fontFamily: FontFamily, fontSize: number) {
   document.body.style.fontSize = `${fontSize}px`;
 }
 
+function sortEnvs(envs: EnvInfo[]) {
+  return [...envs].sort((a, b) => {
+    if (a.name === 'base' && b.name !== 'base') return -1;
+    if (b.name === 'base' && a.name !== 'base') return 1;
+    if (a.active && !b.active) return -1;
+    if (b.active && !a.active) return 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 interface Toast {
   message: string;
   type: 'success' | 'error';
@@ -172,6 +182,8 @@ function App() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [selectedEnv, setSelectedEnv] = useState<string>('');
   const [newEnvName, setNewEnvName] = useState('');
+  const [skillSourcePath, setSkillSourcePath] = useState('');
+  const [installTarget, setInstallTarget] = useState('');
 
   // Agent detail state
   const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
@@ -215,11 +227,14 @@ function App() {
       ]);
       setStatus(statusData);
       setSkills(skillsData || []);
-      setEnvs(envsData || []);
+      const orderedEnvs = sortEnvs(envsData || []);
+      setEnvs(orderedEnvs);
       setAgents(agentsData || []);
       setConfigData(cfgData);
-      if (!selectedEnv && envsData?.length > 0) {
-        setSelectedEnv(envsData[0].name);
+      if (orderedEnvs.length === 0) {
+        setSelectedEnv('');
+      } else if (!orderedEnvs.some(env => env.name === selectedEnv)) {
+        setSelectedEnv(orderedEnvs[0].name);
       }
     } catch (err) {
       console.error('Failed to fetch data:', err);
@@ -232,6 +247,22 @@ function App() {
   useEffect(() => { applyUIPrefs(fontFamily, fontSize); }, [fontFamily, fontSize]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { api.getVersion().then(v => setAppVersion(v)).catch(() => {}); }, []);
+  useEffect(() => {
+    const availableAgents = agents.filter(a => a.available);
+    if (availableAgents.length === 0) {
+      if (installTarget) setInstallTarget('');
+      return;
+    }
+    if (!availableAgents.some(agent => agent.id === installTarget)) {
+      setInstallTarget(availableAgents[0].id);
+    }
+  }, [agents, installTarget]);
+
+  const handleInitialize = async () => {
+    const result = await api.initialize();
+    handleResult(result);
+    if (result.success) refresh();
+  };
 
   const handleActivate = async (envName: string) => {
     handleResult(await api.activate(envName));
@@ -246,6 +277,38 @@ function App() {
   const handleScan = async () => {
     handleResult(await api.scanAgents());
     refresh();
+  };
+
+  const handleAddSkillFromPath = async () => {
+    const source = skillSourcePath.trim();
+    if (!source) {
+      showToast('Enter a local skill folder path first.', 'error');
+      return;
+    }
+    const result = await api.addSkillFromPath(source);
+    handleResult(result);
+    if (result.success) {
+      setSkillSourcePath('');
+      refresh();
+    }
+  };
+
+  const handleInstallSkillPathToAgent = async () => {
+    const source = skillSourcePath.trim();
+    if (!source) {
+      showToast('Enter a local skill folder path first.', 'error');
+      return;
+    }
+    if (!installTarget) {
+      showToast('Select a target agent first.', 'error');
+      return;
+    }
+    const result = await api.installSkillPathToAgent(installTarget, source);
+    handleResult(result);
+    if (result.success) {
+      setSkillSourcePath('');
+      refresh();
+    }
   };
 
   const handleCreateEnv = async () => {
@@ -367,7 +430,7 @@ function App() {
     // Agent install actions
     if (availableAgents.length > 0) {
       items.push('separator');
-      items.push({ label: 'Install to Agent', type: 'label' });
+      items.push({ label: 'Install to One Agent (Symlink)', type: 'label' });
       for (const ag of availableAgents) {
         items.push({ label: ag.name, icon: <IconInstall />, onClick: () => handleInstallSkillToAgent(ag.id, skillName) });
       }
@@ -429,10 +492,29 @@ function App() {
 
       <main className="main-content">
         {view === 'dashboard' && (
-          <DashboardView status={status} onActivate={handleActivate} onDeactivate={handleDeactivate} onScan={handleScan} envs={envs} agents={agents} onAgentClick={a => { setView('agents'); openAgentDetail(a); }} />
+          <DashboardView status={status} onActivate={handleActivate} onDeactivate={handleDeactivate} onScan={handleScan} onInitialize={handleInitialize} envs={envs} agents={agents} onAgentClick={a => { setView('agents'); openAgentDetail(a); }} />
         )}
         {view === 'skills' && (
-          <SkillsView skills={skills} envs={envs} agents={agents} selectedEnv={selectedEnv} currentEnv={currentEnv} onSelectEnv={setSelectedEnv} onToggleSkill={handleToggleSkill} layout={skillsLayout} onLayoutChange={setSkillsLayout} splitAgent={splitAgent} onSplitAgentChange={setSplitAgent} onSkillContextMenu={buildSkillContextMenu} />
+          <SkillsView
+            skills={skills}
+            envs={envs}
+            agents={agents}
+            selectedEnv={selectedEnv}
+            currentEnv={currentEnv}
+            onSelectEnv={setSelectedEnv}
+            onToggleSkill={handleToggleSkill}
+            layout={skillsLayout}
+            onLayoutChange={setSkillsLayout}
+            splitAgent={splitAgent}
+            onSplitAgentChange={setSplitAgent}
+            onSkillContextMenu={buildSkillContextMenu}
+            skillSourcePath={skillSourcePath}
+            onSkillSourcePathChange={setSkillSourcePath}
+            installTarget={installTarget}
+            onInstallTargetChange={setInstallTarget}
+            onAddSkillFromPath={handleAddSkillFromPath}
+            onInstallSkillPathToAgent={handleInstallSkillPathToAgent}
+          />
         )}
         {view === 'envs' && (
           <EnvsView envs={envs} skills={skills} selectedEnv={selectedEnv} onSelectEnv={setSelectedEnv} newEnvName={newEnvName} onNewEnvNameChange={setNewEnvName} onCreateEnv={handleCreateEnv} onRemoveEnv={handleRemoveEnv} onActivate={handleActivate} onDeactivate={handleDeactivate} onToggleSkill={handleToggleSkill} />
@@ -572,15 +654,19 @@ interface DashboardViewProps {
   onActivate: (envName: string) => void;
   onDeactivate: () => void;
   onScan: () => void;
+  onInitialize: () => void;
   onAgentClick: (agent: AgentInfo) => void;
 }
 
-function DashboardView({ status, envs, onActivate, onDeactivate, onScan, onAgentClick }: DashboardViewProps) {
+function DashboardView({ status, envs, onActivate, onDeactivate, onScan, onInitialize, onAgentClick }: DashboardViewProps) {
+  const orderedEnvs = sortEnvs(envs);
+  const baseEnv = orderedEnvs.find(env => env.name === 'base');
+
   return (
     <>
       <div className="page-header">
         <h2>Dashboard</h2>
-        <p>Overview of your skill management status</p>
+        <p>Initialize base, add reusable skills, install to one agent, or activate an environment.</p>
       </div>
 
       <div className="stats-grid">
@@ -588,6 +674,46 @@ function DashboardView({ status, envs, onActivate, onDeactivate, onScan, onAgent
         <div className="stat-card"><div className="stat-value">{status?.envCount || 0}</div><div className="stat-label">Environments</div></div>
         <div className="stat-card"><div className="stat-value">{status?.agents?.filter(a => a.available).length || 0}</div><div className="stat-label">Available Agents</div></div>
         <div className="stat-card"><div className="stat-value">{status?.managedSkills?.length || 0}</div><div className="stat-label">Deployed Skills</div></div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Recommended Order</span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {!baseEnv && <button className="btn btn-primary btn-sm" onClick={onInitialize}>Initialize Base Snapshot</button>}
+            {baseEnv && <button className="btn btn-secondary btn-sm" onClick={() => onActivate('base')}>Activate Base</button>}
+          </div>
+        </div>
+        <div className="list">
+          <div className="list-item">
+            <div className="list-item-content">
+              <div className="list-item-title">1. Initialize</div>
+              <div className="list-item-subtitle">Create `~/.skim` and snapshot current agent skills into the `base` environment.</div>
+            </div>
+            {baseEnv ? <span className="badge badge-success">base ready</span> : <span className="badge badge-warning">pending</span>}
+          </div>
+          <div className="list-item">
+            <div className="list-item-content">
+              <div className="list-item-title">2. Add or install</div>
+              <div className="list-item-subtitle">Use the Skills page to add a skill to the store or install it to one agent via symlink.</div>
+            </div>
+            <span className="badge badge-info">Skills page</span>
+          </div>
+          <div className="list-item">
+            <div className="list-item-content">
+              <div className="list-item-title">3. Reuse with environments</div>
+              <div className="list-item-subtitle">Put store skills into an environment, then activate it to deploy to all enabled agents.</div>
+            </div>
+            <span className="badge badge-info">Environments</span>
+          </div>
+          <div className="list-item">
+            <div className="list-item-content">
+              <div className="list-item-title">4. Re-import external changes</div>
+              <div className="list-item-subtitle">Scan agents when skills were added outside skim after initialization.</div>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={onScan}>Scan Agents</button>
+          </div>
+        </div>
       </div>
 
       <div className="card">
@@ -658,13 +784,17 @@ function DashboardView({ status, envs, onActivate, onDeactivate, onScan, onAgent
         ) : (
           <div className="empty-state">
             <h3>No Active Environment</h3>
-            <p>Select an environment to activate and deploy skills.</p>
-            {envs.length > 0 && (
+            <p>{baseEnv ? 'Activate the base snapshot or select another environment to deploy skills.' : 'Initialize skim first to create the base snapshot environment.'}</p>
+            <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {!baseEnv && <button className="btn btn-primary btn-sm" onClick={onInitialize}>Initialize Base Snapshot</button>}
+              {baseEnv && <button className="btn btn-primary btn-sm" onClick={() => onActivate('base')}>Activate Base</button>}
+            </div>
+            {orderedEnvs.length > 0 && (
               <div style={{ marginTop: '12px' }}>
                 <CustomSelect
                   value=""
                   placeholder="Select environment..."
-                  options={envs.map(env => ({ value: env.name, label: env.name }))}
+                  options={orderedEnvs.map(env => ({ value: env.name, label: env.name }))}
                   onChange={(v) => v && onActivate(v)}
                 />
               </div>
@@ -709,10 +839,36 @@ interface SkillsViewProps {
   splitAgent: string;
   onSplitAgentChange: (id: string) => void;
   onSkillContextMenu: (e: React.MouseEvent, skillName: string) => void;
+  skillSourcePath: string;
+  onSkillSourcePathChange: (path: string) => void;
+  installTarget: string;
+  onInstallTargetChange: (id: string) => void;
+  onAddSkillFromPath: () => void;
+  onInstallSkillPathToAgent: () => void;
 }
 
-function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv, onToggleSkill, layout, onLayoutChange, splitAgent, onSplitAgentChange, onSkillContextMenu }: SkillsViewProps) {
+function SkillsView({
+  skills,
+  envs,
+  agents,
+  selectedEnv,
+  currentEnv,
+  onSelectEnv,
+  onToggleSkill,
+  layout,
+  onLayoutChange,
+  splitAgent,
+  onSplitAgentChange,
+  onSkillContextMenu,
+  skillSourcePath,
+  onSkillSourcePathChange,
+  installTarget,
+  onInstallTargetChange,
+  onAddSkillFromPath,
+  onInstallSkillPathToAgent,
+}: SkillsViewProps) {
   const availableAgents = agents.filter(a => a.available);
+  const orderedEnvs = sortEnvs(envs);
 
   // Auto-select first available agent for split view
   useEffect(() => {
@@ -725,14 +881,46 @@ function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv
     <>
       <div className="page-header">
         <h2>Skills</h2>
-        <p>Manage skills in your global store and assign them to environments</p>
+        <p>Add local skills into the store, install one skill to one agent, or assign store skills to environments.</p>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Add or Install from Local Path</span>
+        </div>
+        <p className="workflow-helper">Use Add to Store for reusable skills. Use Install to One Agent for a direct symlink install, similar to `skim install -t` in the CLI.</p>
+        <div className="quick-action-grid">
+          <div className="quick-action-field">
+            <label className="quick-action-label">Skill Folder Path</label>
+            <input
+              type="text"
+              className="input"
+              placeholder="./examples/demo-skill"
+              value={skillSourcePath}
+              onChange={(e) => onSkillSourcePathChange(e.target.value)}
+            />
+          </div>
+          <div className="quick-action-field">
+            <label className="quick-action-label">Target Agent</label>
+            <CustomSelect
+              value={installTarget}
+              placeholder={availableAgents.length > 0 ? 'Select agent...' : 'No available agents'}
+              options={availableAgents.map(agent => ({ value: agent.id, label: agent.name }))}
+              onChange={onInstallTargetChange}
+            />
+          </div>
+          <div className="quick-action-buttons">
+            <button className="btn btn-secondary" onClick={onAddSkillFromPath} disabled={!skillSourcePath.trim()}>Add to Store</button>
+            <button className="btn btn-primary" onClick={onInstallSkillPathToAgent} disabled={!skillSourcePath.trim() || !installTarget}>Install to One Agent</button>
+          </div>
+        </div>
       </div>
 
       <div className="toolbar">
         <div className="toolbar-left">
-          {envs.length > 0 && (
+          {orderedEnvs.length > 0 && (
             <div className="env-selector">
-              {envs.map(env => (
+              {orderedEnvs.map(env => (
                 <div key={env.name} className={`env-chip ${selectedEnv === env.name ? 'active' : ''} ${env.active ? 'current' : ''}`} onClick={() => onSelectEnv(env.name)}>
                   {env.name} ({env.skills?.length || 0}){env.active && ' \u2713'}
                 </div>
@@ -774,7 +962,7 @@ function SkillsView({ skills, envs, agents, selectedEnv, currentEnv, onSelectEnv
 
 function SkillList({ skills, currentEnv, selectedEnv, onToggleSkill, onContextMenu }: { skills: SkillInfo[]; currentEnv: EnvInfo | undefined; selectedEnv: string; onToggleSkill: (name: string, enabled: boolean) => void; onContextMenu: (e: React.MouseEvent, name: string) => void }) {
   if (skills.length === 0) {
-    return <div className="empty-state"><h3>No Skills</h3><p>Run "skim agent scan" to import skills from your agents.</p></div>;
+    return <div className="empty-state"><h3>No Skills</h3><p>Initialize the base snapshot on Dashboard, add a local skill above, or run Scan Agents to import external skills added after init.</p></div>;
   }
   return (
     <div className="list">
@@ -1030,16 +1218,17 @@ interface EnvsViewProps {
 }
 
 function EnvsView({ envs, skills, selectedEnv, onSelectEnv, newEnvName, onNewEnvNameChange, onCreateEnv, onRemoveEnv, onActivate, onDeactivate, onToggleSkill }: EnvsViewProps) {
-  const currentEnv = envs.find(e => e.name === selectedEnv);
+  const orderedEnvs = sortEnvs(envs);
+  const currentEnv = orderedEnvs.find(e => e.name === selectedEnv);
   const envSkills = currentEnv?.skills || [];
   const availableSkills = skills.filter(s => !envSkills.includes(s.name));
 
   // Auto-select first environment if none selected
   useEffect(() => {
-    if (!selectedEnv && envs.length > 0) {
-      onSelectEnv(envs[0].name);
+    if (!selectedEnv && orderedEnvs.length > 0) {
+      onSelectEnv(orderedEnvs[0].name);
     }
-  }, [selectedEnv, envs, onSelectEnv]);
+  }, [selectedEnv, orderedEnvs, onSelectEnv]);
 
   const getSkillInfo = (skillName: string): SkillInfo | undefined => {
     return skills.find(s => s.name === skillName);
@@ -1055,17 +1244,17 @@ function EnvsView({ envs, skills, selectedEnv, onSelectEnv, newEnvName, onNewEnv
         <button className="btn btn-primary" onClick={onCreateEnv}>Create Environment</button>
       </div>
 
-      {envs.length === 0 ? (
+      {orderedEnvs.length === 0 ? (
         <div className="card">
-          <div className="empty-state"><h3>No Environments</h3><p>Create an environment to group skills together.</p></div>
+          <div className="empty-state"><h3>No Environments</h3><p>Run Initialize on the Dashboard to create `base`, or create an environment here to group store skills together.</p></div>
         </div>
       ) : (
         <div className="env-split-pane">
           {/* Environment List - Left Panel */}
           <div className="env-list-panel">
-            <div className="env-list-header">Environments ({envs.length})</div>
+            <div className="env-list-header">Environments ({orderedEnvs.length})</div>
             <div className="env-list">
-              {envs.map(env => (
+              {orderedEnvs.map(env => (
                 <div
                   key={env.name}
                   className={`env-list-item ${selectedEnv === env.name ? 'selected' : ''} ${env.active ? 'active-env' : ''}`}
@@ -1178,8 +1367,8 @@ interface AgentsViewProps {
 function AgentsView({ agents, onScan, onAgentClick }: AgentsViewProps) {
   return (
     <>
-      <div className="page-header"><h2>Agents</h2><p>View and scan coding agent frameworks</p></div>
-      <div style={{ marginBottom: '16px' }}><button className="btn btn-primary" onClick={onScan}>Scan All Agents</button></div>
+      <div className="page-header"><h2>Agents</h2><p>Inspect agent frameworks and re-import skills added outside skim.</p></div>
+      <div style={{ marginBottom: '16px' }}><button className="btn btn-primary" onClick={onScan}>Scan External Skills</button></div>
       <div className="agent-grid">
         {agents.map(agent => (
           <div key={agent.id} className="agent-card" onClick={() => agent.available && onAgentClick(agent)}>
@@ -1456,6 +1645,7 @@ function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onR
               <button className={`btn btn-sm ${config?.linkStrategy === 'hardlink' ? 'btn-primary' : 'btn-outline'}`} onClick={() => onSetLinkStrategy('hardlink')}>Hardlink</button>
             </div>
           </div>
+          <div className="settings-note">This strategy is used for environment activation. Single-agent installs from the Skills page always use symlinks.</div>
           <div className="settings-info-row">
             <span className="settings-info-label">Skills in Store</span>
             <span className="settings-info-value">{status?.storeCount ?? 0}</span>
