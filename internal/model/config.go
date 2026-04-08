@@ -15,14 +15,14 @@ type AgentConfig struct {
 func DefaultConfig() Config {
 	return Config{
 		Version:      1,
-		LinkStrategy: "copy",
+		LinkStrategy: "symlink",
 		Agents: map[string]AgentConfig{
-			"claude":    {SkillDir: "~/.claude/skills", Enabled: true, Format: "standard"},
-			"codex":     {SkillDir: "~/.codex/skills", Enabled: true, Format: "standard"},
-			"gemini":    {SkillDir: "~/.gemini", Enabled: true, Format: "gemini"},
-			"qoder":     {SkillDir: "~/.qoder/skills", Enabled: true, Format: "standard"},
-			"qoderwork": {SkillDir: "~/.qoderwork/skills", Enabled: true, Format: "standard"},
-			"openclaw":     {SkillDir: "~/.openclaw/skills", Enabled: true, Format: "standard"},
+			"claude":      {SkillDir: "~/.claude/skills", Enabled: true, Format: "standard"},
+			"codex":       {SkillDir: "~/.codex/skills", Enabled: true, Format: "standard"},
+			"gemini":      {SkillDir: "~/.gemini", Enabled: true, Format: "gemini"},
+			"qoder":       {SkillDir: "~/.qoder/skills", Enabled: true, Format: "standard"},
+			"qoderwork":   {SkillDir: "~/.qoderwork/skills", Enabled: true, Format: "standard"},
+			"openclaw":    {SkillDir: "~/.openclaw/skills", Enabled: true, Format: "standard"},
 			"antigravity": {SkillDir: "~/.gemini/antigravity/skills", Enabled: true, Format: "standard"},
 		},
 	}

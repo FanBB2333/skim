@@ -21,10 +21,14 @@ type Service struct {
 
 // NewLinker creates a Linker based on the given strategy string.
 func NewLinker(strategy string) linker.Linker {
-	if strategy == "symlink" {
+	switch strategy {
+	case "hardlink":
+		return linker.NewHardlinkLinker()
+	case "copy":
+		return linker.NewCopyLinker()
+	default:
 		return linker.NewSymlinkLinker()
 	}
-	return linker.NewCopyLinker()
 }
 
 // NewService creates a fully wired Service from the given config.

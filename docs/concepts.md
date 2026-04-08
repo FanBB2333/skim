@@ -89,8 +89,8 @@ The **global store** (`~/.skim/store/`) is where all skills are centrally stored
 
 ### Link Strategy
 
-skim uses a **copy** strategy by default, copying skill files to agent directories. This ensures:
+skim uses a **symlink** strategy by default, linking agent skill directories back to the global store. You can also switch to **hardlink** mode when you want independent directories with shared file inodes.
 
-- Skills work even if skim is uninstalled
-- No dependency on symlinks
-- Consistent behavior across platforms
+- Symlinks save space and reflect store updates immediately
+- Hardlinks keep agent directories materialized while avoiding full file copies
+- Both strategies keep skim-managed installs removable via `skim deactivate`

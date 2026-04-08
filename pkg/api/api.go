@@ -409,13 +409,13 @@ func (a *App) SetAgentEnabled(agentID string, enabled bool) *OperationResult {
 	return &OperationResult{Success: true, Message: fmt.Sprintf("%s agent %q", action, agentID)}
 }
 
-// SetLinkStrategy updates the link strategy (copy or symlink).
+// SetLinkStrategy updates the link strategy (symlink or hardlink).
 func (a *App) SetLinkStrategy(strategy string) *OperationResult {
 	if a.svc == nil {
 		return &OperationResult{Success: false, Message: "service not initialized"}
 	}
-	if strategy != "copy" && strategy != "symlink" {
-		return &OperationResult{Success: false, Message: fmt.Sprintf("invalid strategy %q: must be 'copy' or 'symlink'", strategy)}
+	if strategy != "symlink" && strategy != "hardlink" {
+		return &OperationResult{Success: false, Message: fmt.Sprintf("invalid strategy %q: must be 'symlink' or 'hardlink'", strategy)}
 	}
 	a.svc.Config.LinkStrategy = strategy
 	if err := config.Save(a.svc.Config); err != nil {
@@ -434,6 +434,7 @@ func (a *App) ResetConfig() *OperationResult {
 		return &OperationResult{Success: false, Message: err.Error()}
 	}
 	a.svc.Config = cfg
+	a.svc.Linker = core.NewLinker(cfg.LinkStrategy)
 	a.svc.Registry = agent.NewRegistry(cfg)
 	a.svc.Activator = core.NewActivator(a.svc.Store, a.svc.Env, a.svc.State, a.svc.Registry, a.svc.Linker)
 	a.svc.Scanner = core.NewScanner(a.svc.Store, a.svc.Registry)

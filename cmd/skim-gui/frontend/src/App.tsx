@@ -1452,8 +1452,8 @@ function SettingsView({ theme, onThemeChange, config, status, onToggleAgent, onR
           <div className="settings-info-row">
             <span className="settings-info-label">Link Strategy</span>
             <div className="btn-group">
-              <button className={`btn btn-sm ${(config?.linkStrategy || 'copy') === 'copy' ? 'btn-primary' : 'btn-outline'}`} onClick={() => onSetLinkStrategy('copy')}>Copy</button>
-              <button className={`btn btn-sm ${config?.linkStrategy === 'symlink' ? 'btn-primary' : 'btn-outline'}`} onClick={() => onSetLinkStrategy('symlink')}>Symlink</button>
+              <button className={`btn btn-sm ${(config?.linkStrategy || 'symlink') === 'symlink' ? 'btn-primary' : 'btn-outline'}`} onClick={() => onSetLinkStrategy('symlink')}>Symlink</button>
+              <button className={`btn btn-sm ${config?.linkStrategy === 'hardlink' ? 'btn-primary' : 'btn-outline'}`} onClick={() => onSetLinkStrategy('hardlink')}>Hardlink</button>
             </div>
           </div>
           <div className="settings-info-row">

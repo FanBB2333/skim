@@ -63,7 +63,7 @@ Configure Skim preferences:
 - **Theme** — Choose from 5 color themes (Morandi Light, Morandi Dark, Ocean, Forest, Rose)
 - **UI Preferences** — Font family and size customization
 - **Agent Configuration** — Enable/disable agents
-- **Storage & Data** — Link strategy (copy/symlink), directory info
+- **Storage & Data** — Link strategy (symlink/hardlink), directory info
 - **Danger Zone** — Reset configuration
 
 ## Features
@@ -90,7 +90,7 @@ Choose how skills are deployed:
 
 | Strategy | Description |
 |----------|-------------|
-| `copy` | Copy skill files (default, portable) |
-| `symlink` | Create symbolic links (saves space, instant updates) |
+| `symlink` | Create symbolic links (default, saves space, instant updates) |
+| `hardlink` | Create real directories with hard-linked files from the store |
 
 Switch between strategies in Settings > Storage & Data.

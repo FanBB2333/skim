@@ -8,7 +8,7 @@ The default configuration looks like this:
 
 ```yaml
 version: 1
-link_strategy: copy
+link_strategy: symlink
 agents:
   claude:
     skill_dir: ~/.claude/skills
@@ -44,7 +44,8 @@ How skills are deployed to agent directories.
 
 | Value | Description |
 |-------|-------------|
-| `copy` | Copy skill files to agent directories (default) |
+| `symlink` | Create symbolic links to the store (default) |
+| `hardlink` | Materialize directories and hard-link files from the store |
 
 ### agents
 

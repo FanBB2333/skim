@@ -10,7 +10,7 @@ Skim is a tool for managing skills (custom instructions) across multiple AI codi
 - **Environment-based** — Group skills into switchable environments
 - **Global store** — Central repository for all your skills
 - **GUI included** — Desktop application built with Wails + React
-- **Flexible linking** — Deploy via file copy or symlink
+- **Flexible linking** — Deploy via symlink or hardlink
 
 ## Supported Agents
 

@@ -68,6 +68,12 @@ func Load() (model.Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return model.Config{}, err
 	}
+	cfg, changed := normalizeLoadedConfig(cfg)
+	if changed {
+		if err := Save(cfg); err != nil {
+			return cfg, err
+		}
+	}
 	return cfg, nil
 }
 
@@ -78,4 +84,16 @@ func Save(cfg model.Config) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(SkimDir(), "config.yaml"), data, 0o644)
+}
+
+func normalizeLoadedConfig(cfg model.Config) (model.Config, bool) {
+	changed := false
+
+	// Migrate legacy "copy" installs to the new symlink default.
+	if cfg.LinkStrategy == "" || cfg.LinkStrategy == "copy" {
+		cfg.LinkStrategy = "symlink"
+		changed = true
+	}
+
+	return cfg, changed
 }
