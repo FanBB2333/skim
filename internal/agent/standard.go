@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/FanBB2333/skim/internal/linker"
 	"github.com/FanBB2333/skim/internal/model"
@@ -43,11 +44,17 @@ func (a *StandardAgent) ListSkills() ([]model.SkillRef, error) {
 
 	var refs []model.SkillRef
 	for _, e := range entries {
-		if !e.IsDir() {
+		name := e.Name()
+		if shouldSkipSkillEntry(name) {
 			continue
 		}
-		name := e.Name()
+
 		skillPath := filepath.Join(a.skillDir, name)
+		info, err := os.Stat(skillPath)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+
 		// Check for SKILL.md
 		if _, err := os.Stat(filepath.Join(skillPath, "SKILL.md")); err != nil {
 			continue
@@ -63,6 +70,28 @@ func (a *StandardAgent) ListSkills() ([]model.SkillRef, error) {
 		})
 	}
 	return refs, nil
+}
+
+func shouldSkipSkillEntry(name string) bool {
+	if name == "" {
+		return true
+	}
+	if strings.HasPrefix(name, ".") {
+		return true
+	}
+
+	lower := strings.ToLower(name)
+	if lower == "backup" {
+		return true
+	}
+
+	for _, suffix := range []string{".backup", ".bak", ".tmp", ".temp", ".orig", "~"} {
+		if strings.HasSuffix(lower, suffix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (a *StandardAgent) InstallSkill(skill model.Skill, lnk linker.Linker) error {
