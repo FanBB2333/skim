@@ -168,8 +168,19 @@ func ParseSkillMD(path string) (SkillMeta, error) {
 	return meta, nil
 }
 
+// maxSymlinkDepth limits how many levels of directory-symlink indirection
+// copyDir will follow, so malformed skills containing cycles cannot hang.
+const maxSymlinkDepth = 40
+
 // copyDir recursively copies src directory to dst.
 func copyDir(src, dst string) error {
+	return copyDirDepth(src, dst, 0)
+}
+
+func copyDirDepth(src, dst string, depth int) error {
+	if depth > maxSymlinkDepth {
+		return fmt.Errorf("symlink depth exceeded at %s (possible cycle)", src)
+	}
 	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -195,7 +206,7 @@ func copyDir(src, dst string) error {
 				return fmt.Errorf("stat symlink target %s: %w", resolved, err)
 			}
 			if info.IsDir() {
-				return copyDir(resolved, target)
+				return copyDirDepth(resolved, target, depth+1)
 			}
 			return copyFile(resolved, target, info.Mode().Perm())
 		}

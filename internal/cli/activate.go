@@ -41,22 +41,25 @@ func newDeactivateCmd() *cobra.Command {
 		Short: "Deactivate the current environment (remove managed skills from agents)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			result, err := svc.Activator.Deactivate()
-			if err != nil {
-				return err
+			// On partial failure Deactivate returns both a non-nil result and
+			// an error; surface the per-skill errors to the user before
+			// propagating the top-level error.
+			if result != nil {
+				if err == nil {
+					color.Green("Deactivated environment")
+				} else {
+					color.Yellow("Deactivate did not fully complete")
+				}
+				fmt.Printf("  %d removal(s) succeeded", result.Succeeded)
+				if result.Failed > 0 {
+					color.Yellow(", %d failed", result.Failed)
+				}
+				fmt.Println()
+				for _, e := range result.Errors {
+					color.Yellow("  warning: %s", e)
+				}
 			}
-
-			color.Green("Deactivated environment")
-			fmt.Printf("  %d removal(s) succeeded", result.Succeeded)
-			if result.Failed > 0 {
-				color.Yellow(", %d failed", result.Failed)
-			}
-			fmt.Println()
-
-			for _, e := range result.Errors {
-				color.Yellow("  warning: %s", e)
-			}
-
-			return nil
+			return err
 		},
 	}
 }

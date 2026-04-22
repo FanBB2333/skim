@@ -302,7 +302,19 @@ func (p *PackManager) packSelection(envName string) ([]string, []string, string,
 	return skills, envs, "all", nil
 }
 
+// maxPackSymlinkDepth caps how many chained symlinks copyPathDereference will
+// follow, so cyclic or deeply indirected skills can't hang pack/unpack.
+const maxPackSymlinkDepth = 40
+
 func copyPathDereference(src, dst, archiveRel string, symlinks *[]PackSymlink) error {
+	return copyPathDereferenceDepth(src, dst, archiveRel, symlinks, 0)
+}
+
+func copyPathDereferenceDepth(src, dst, archiveRel string, symlinks *[]PackSymlink, depth int) error {
+	if depth > maxPackSymlinkDepth {
+		return fmt.Errorf("symlink depth exceeded at %s (possible cycle)", src)
+	}
+
 	info, err := os.Lstat(src)
 	if err != nil {
 		return err
@@ -330,7 +342,7 @@ func copyPathDereference(src, dst, archiveRel string, symlinks *[]PackSymlink) e
 			Target:     target,
 			TargetType: targetType,
 		})
-		return copyPathDereference(resolved, dst, archiveRel, symlinks)
+		return copyPathDereferenceDepth(resolved, dst, archiveRel, symlinks, depth+1)
 	}
 
 	if info.IsDir() {
@@ -345,7 +357,9 @@ func copyPathDereference(src, dst, archiveRel string, symlinks *[]PackSymlink) e
 			childSrc := filepath.Join(src, entry.Name())
 			childDst := filepath.Join(dst, entry.Name())
 			childRel := path.Join(filepath.ToSlash(archiveRel), entry.Name())
-			if err := copyPathDereference(childSrc, childDst, childRel, symlinks); err != nil {
+			// Pass depth through; only symlink resolution increments it so
+			// normal deep directory trees aren't penalised.
+			if err := copyPathDereferenceDepth(childSrc, childDst, childRel, symlinks, depth); err != nil {
 				return err
 			}
 		}
@@ -524,6 +538,9 @@ func ensureInsideDir(base, target string) error {
 func validatePackName(name string) error {
 	if name == "" {
 		return errors.New("name is empty")
+	}
+	if name == "." || name == ".." {
+		return errors.New("name must not be '.' or '..'")
 	}
 	if filepath.Base(name) != name || strings.ContainsAny(name, `/\`) {
 		return errors.New("name must not contain path separators")

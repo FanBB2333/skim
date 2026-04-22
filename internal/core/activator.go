@@ -96,6 +96,9 @@ func (a *Activator) Activate(envName string) (*ActivateResult, error) {
 }
 
 // Deactivate removes all skim-managed skills from agents.
+// If any removal fails the entries that remain deployed are preserved in state
+// so the next deactivate call can retry them, and the active environment is
+// kept so subsequent commands still see the partial deployment.
 func (a *Activator) Deactivate() (*ActivateResult, error) {
 	state, err := a.state.Load()
 	if err != nil {
@@ -106,26 +109,47 @@ func (a *Activator) Deactivate() (*ActivateResult, error) {
 	}
 
 	result := &ActivateResult{}
+	var remaining []model.ManagedSkillEntry
 
 	for _, entry := range state.ManagedSkills {
+		var stillDeployed []string
 		for _, agentID := range entry.DeployedTo {
 			ag := a.registry.Get(agentID)
 			if ag == nil {
+				// Agent is no longer registered; we cannot drive cleanup
+				// through the removed agent, so drop the reference.
 				continue
 			}
 			if err := ag.RemoveSkill(entry.Skill, a.linker); err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, fmt.Sprintf("skill %q from %s: %s", entry.Skill, ag.Name(), err))
+				stillDeployed = append(stillDeployed, agentID)
 				continue
 			}
 			result.Succeeded++
 		}
+		if len(stillDeployed) > 0 {
+			remaining = append(remaining, model.ManagedSkillEntry{
+				Skill:      entry.Skill,
+				DeployedTo: stillDeployed,
+			})
+		}
 	}
 
-	// Clear state
-	if err := a.state.Save(model.State{}); err != nil {
+	var newState model.State
+	if len(remaining) > 0 {
+		newState = model.State{
+			ActiveEnv:     state.ActiveEnv,
+			ActivatedAt:   state.ActivatedAt,
+			ManagedSkills: remaining,
+		}
+	}
+	if err := a.state.Save(newState); err != nil {
 		return result, fmt.Errorf("save state: %w", err)
 	}
 
+	if len(remaining) > 0 {
+		return result, fmt.Errorf("%d skill deployment(s) could not be removed; state preserved for retry", result.Failed)
+	}
 	return result, nil
 }
