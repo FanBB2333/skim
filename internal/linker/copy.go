@@ -40,11 +40,19 @@ func (c *CopyLinker) LinkDir(src, dst string) error {
 			return os.MkdirAll(target, 0o755)
 		}
 
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(target, data, 0o644)
+		perm := info.Mode().Perm()
+		if perm == 0 {
+			perm = 0o644
+		}
+		return os.WriteFile(target, data, perm)
 	}); err != nil {
 		return fmt.Errorf("copy %s -> %s: %w", src, dst, err)
 	}
