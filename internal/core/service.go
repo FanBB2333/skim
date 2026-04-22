@@ -15,6 +15,7 @@ type Service struct {
 	Env       *EnvManager
 	Activator *Activator
 	Scanner   *Scanner
+	Pack      *PackManager
 	Registry  *agent.Registry
 	Linker    linker.Linker
 }
@@ -40,6 +41,7 @@ func NewService(cfg model.Config) *Service {
 	lnk := NewLinker(cfg.LinkStrategy)
 	activator := NewActivator(storeMgr, envMgr, stateMgr, reg, lnk)
 	scanner := NewScanner(storeMgr, reg)
+	packMgr := NewPackManager(storeMgr, envMgr)
 
 	return &Service{
 		Config:    cfg,
@@ -48,6 +50,7 @@ func NewService(cfg model.Config) *Service {
 		Env:       envMgr,
 		Activator: activator,
 		Scanner:   scanner,
+		Pack:      packMgr,
 		Registry:  reg,
 		Linker:    lnk,
 	}

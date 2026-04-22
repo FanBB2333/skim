@@ -57,6 +57,57 @@ Add a skill to the global store and install it to one specific agent via symlink
 skim install -t qoder ./examples/demo-skill
 ```
 
+### skim pack
+
+```
+skim pack [-o <archive>] [--env <env>]
+```
+
+Pack skim-managed skills and environments into a portable `.tar.gz` archive.
+
+Without `--env`, the archive includes all skills in `~/.skim/store` and all environments in `~/.skim/envs`. With `--env`, it includes only that environment and the skills it references.
+
+The archive contains `manifest.yaml`, `config.yaml`, selected `store/` entries, and selected `envs/` entries. The manifest records the pack format, format version, skim version, pack time, packed skills, packed environments, and symlink handling mode.
+
+Symlinked files and directories inside skills are dereferenced into regular archive entries so the pack can be moved to another machine.
+
+**Flags:**
+- `-o, --output` — Output archive path
+- `--env` — Pack only one environment and its referenced skills
+
+**Examples:**
+
+```bash
+# Pack everything
+skim pack -o skim-all.tar.gz
+
+# Pack one environment and its skills
+skim pack --env work -o work-skills.tar.gz
+```
+
+### skim unpack
+
+```
+skim unpack <archive> [--force]
+```
+
+Import a skim pack archive into the current machine's `~/.skim` directory.
+
+By default, unpack refuses to overwrite existing skills, environments, or `config.yaml`. Use `--force` to replace only the paths contained in the archive. `unpack` does not restore active deployment state; run `skim activate <env>` after importing.
+
+**Arguments:**
+- `archive` — Path to a `.tar.gz` archive created by `skim pack`
+
+**Flags:**
+- `--force` — Overwrite archive-owned skills, environments, and config
+
+**Example:**
+
+```bash
+skim unpack work-skills.tar.gz
+skim activate work
+```
+
 ### skim status
 
 ```

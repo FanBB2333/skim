@@ -2,6 +2,7 @@ package core
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -184,10 +185,39 @@ func copyDir(src, dst string) error {
 			return os.MkdirAll(target, 0o755)
 		}
 
-		data, err := os.ReadFile(path)
+		if d.Type()&os.ModeSymlink != 0 {
+			resolved, err := filepath.EvalSymlinks(path)
+			if err != nil {
+				return fmt.Errorf("resolve symlink %s: %w", path, err)
+			}
+			info, err := os.Stat(resolved)
+			if err != nil {
+				return fmt.Errorf("stat symlink target %s: %w", resolved, err)
+			}
+			if info.IsDir() {
+				return copyDir(resolved, target)
+			}
+			return copyFile(resolved, target, info.Mode().Perm())
+		}
+
+		info, err := d.Info()
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(target, data, 0o644)
+		return copyFile(path, target, info.Mode().Perm())
 	})
+}
+
+func copyFile(src, dst string, perm os.FileMode) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	if perm == 0 {
+		perm = 0o644
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, perm)
 }

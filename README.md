@@ -8,6 +8,7 @@ Skill Version Manager for coding agents. Manage and switch skills across multipl
 - **Global Skill Store** — Centralized skill management with easy import/export
 - **Environment Switching** — Create isolated skill sets and switch between them instantly
 - **One-Command Deploy** — Activate an environment to deploy skills to all agents at once
+- **Portable Packs** — Export and import skim skills and environments across devices
 
 ## Installation
 
@@ -76,6 +77,10 @@ flowchart TD
     Q --> R["skim activate another-env"]
     Q --> S["skim deactivate"]
 
+    E --> X["Move this setup to another device"]
+    X --> XA["skim pack --env work -o work.tar.gz"]
+    XA --> XB["On the target device:<br/>skim unpack work.tar.gz<br/>skim activate work"]
+
     E --> T["An agent got new skills outside skim"]
     T --> U["skim agent scan"]
 
@@ -111,7 +116,11 @@ flowchart TD
 7. **Import external changes later**
    Use `skim agent scan` when someone added skills directly into an agent outside skim after your initial setup and you want skim to re-import them into the store.
 
-8. **Clean up**
+8. **Move an environment to another device**
+   Use `skim pack --env <name> -o <file.tar.gz>` to export one environment and the skills it references. On the target device, run `skim unpack <file.tar.gz>`, then `skim activate <name>`.
+   `pack` dereferences symlinked files and directories inside skills, so the archive does not point back to paths on the source machine.
+
+9. **Clean up**
    Use `skim skill disable <skill> --env <env>` to remove a skill from an environment, `skim env remove <env>` to delete an environment, and `skim skill remove <skill>` to delete a skill from the store when you no longer want to manage it.
 
 ### Typical Scenarios
@@ -130,6 +139,8 @@ flowchart TD
 | `skim init` | Initialize skim configuration |
 | `skim add <path>` | Add a skill from local path to the global store |
 | `skim install -t <agent> <path>` | Add to the store and install to one target agent |
+| `skim pack [-o <file>] [--env <env>]` | Export skills and environments to a portable archive |
+| `skim unpack <archive> [--force]` | Import a skim pack archive |
 | `skim env list` | List all environments |
 | `skim env create <name>` | Create a new environment |
 | `skim env remove <name>` | Remove an environment |

@@ -6,6 +6,7 @@ import (
 
 	"github.com/FanBB2333/skim/internal/config"
 	"github.com/FanBB2333/skim/internal/core"
+	"github.com/FanBB2333/skim/internal/model"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +19,13 @@ func NewRootCmd() *cobra.Command {
 		Short: "Skill Version Manager for coding agents",
 		Long:  "skim manages skills across multiple coding agent frameworks (Claude, Codex, Gemini, Qoder, QoderWork) using a global store with environment-based switching.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if cmd.CommandPath() == "skim unpack" {
+				if err := config.EnsureDirs(); err != nil {
+					return fmt.Errorf("create directories: %w", err)
+				}
+				svc = core.NewService(model.DefaultConfig())
+				return nil
+			}
 			cfg, err := config.Load()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
@@ -38,6 +46,8 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newAgentCmd())
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newCompletionCmd())
+	root.AddCommand(newPackCmd())
+	root.AddCommand(newUnpackCmd())
 
 	return root
 }
