@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Light Morandi palette — warm cream paper with dusty sage + earth accents.
+       Close to morandi.cream (#f3ecdd) but a touch brighter so content pops. */
+    --background: 40 38% 95%;
+    --foreground: 30 14% 18%;
+    --card: 40 50% 98%;
+    --card-foreground: 30 14% 18%;
+    --primary: 30 12% 22%;
+    --primary-foreground: 40 40% 97%;
+    --muted: 38 22% 90%;
+    --muted-foreground: 30 10% 40%;
+    --accent: 95 14% 88%;
+    --accent-foreground: 30 12% 20%;
+    --border: 38 18% 84%;
+    --input: 38 18% 84%;
+    --ring: 30 12% 30%;
+    --radius: 1rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  html {
+    /* Lock the page to the Morandi light palette even on dark-mode systems. */
+    color-scheme: light;
+    background-color: hsl(var(--background));
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+}
