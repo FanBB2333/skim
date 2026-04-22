@@ -59,8 +59,13 @@ func (a *StandardAgent) ListSkills() ([]model.SkillRef, error) {
 		if _, err := os.Stat(filepath.Join(skillPath, "SKILL.md")); err != nil {
 			continue
 		}
+		// A skill is considered skim-managed if either:
+		//   - it has a ".skim-managed" file inside (copy/hardlink deployments), or
+		//   - it has a ".skim-managed.<name>" sibling in the same skills dir (symlink deployments).
 		managed := false
 		if _, err := os.Stat(filepath.Join(skillPath, ".skim-managed")); err == nil {
+			managed = true
+		} else if _, err := os.Stat(filepath.Join(a.skillDir, ".skim-managed."+name)); err == nil {
 			managed = true
 		}
 		refs = append(refs, model.SkillRef{

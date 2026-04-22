@@ -128,23 +128,33 @@ func (g *GeminiAgent) RemoveSkill(skillName string, _ linker.Linker) error {
 	return g.atomicWrite(content)
 }
 
+// removeSkillSection removes every begin/end pair for skillName, so orphaned
+// duplicate sections left behind by crashed writes or manual edits are fully
+// cleaned up. The end marker is searched from the matching begin onward rather
+// than globally, so an unrelated end tag earlier in the file is not mistaken
+// for this section's terminator.
 func (g *GeminiAgent) removeSkillSection(content, skillName string) string {
 	begin := skillBeginTag(skillName)
 	end := skillEndTag(skillName)
 
-	beginIdx := strings.Index(content, begin)
-	endIdx := strings.Index(content, end)
-	if beginIdx < 0 || endIdx < 0 {
-		return content
-	}
+	for {
+		beginIdx := strings.Index(content, begin)
+		if beginIdx < 0 {
+			return content
+		}
+		relEnd := strings.Index(content[beginIdx:], end)
+		if relEnd < 0 {
+			return content
+		}
+		endIdx := beginIdx + relEnd + len(end)
 
-	before := content[:beginIdx]
-	after := content[endIdx+len(end):]
-	// Clean up extra newline
-	if len(after) > 0 && after[0] == '\n' {
-		after = after[1:]
+		before := content[:beginIdx]
+		after := content[endIdx:]
+		if len(after) > 0 && after[0] == '\n' {
+			after = after[1:]
+		}
+		content = before + after
 	}
-	return before + after
 }
 
 func (g *GeminiAgent) atomicWrite(content string) error {
@@ -152,5 +162,9 @@ func (g *GeminiAgent) atomicWrite(content string) error {
 	if err := os.WriteFile(tmpPath, []byte(content), 0o644); err != nil {
 		return err
 	}
-	return os.Rename(tmpPath, g.geminiMDPath())
+	if err := os.Rename(tmpPath, g.geminiMDPath()); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	return nil
 }

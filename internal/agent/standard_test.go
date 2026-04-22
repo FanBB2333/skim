@@ -35,6 +35,39 @@ func TestStandardAgentListSkillsIncludesSymlinkedSkills(t *testing.T) {
 	}
 }
 
+func TestStandardAgentListSkillsDetectsSiblingSymlinkMarker(t *testing.T) {
+	skillsDir := t.TempDir()
+	storeSkillDir := filepath.Join(t.TempDir(), "demo-skill")
+
+	mustMkdirAll(t, storeSkillDir)
+	writeSkillMD(t, storeSkillDir, "demo-skill")
+	// Deliberately do NOT write ".skim-managed" into the store — we don't
+	// want the linker to pollute the shared store. Instead the sibling
+	// marker is placed alongside the symlink.
+	if err := os.Symlink(storeSkillDir, filepath.Join(skillsDir, "demo-skill")); err != nil {
+		t.Fatalf("symlink skill dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(skillsDir, ".skim-managed.demo-skill"), []byte("managed"), 0o644); err != nil {
+		t.Fatalf("write sibling marker: %v", err)
+	}
+
+	ag := NewStandardAgent("QoderWork", "qoderwork", skillsDir)
+	refs, err := ag.ListSkills()
+	if err != nil {
+		t.Fatalf("list skills: %v", err)
+	}
+
+	if len(refs) != 1 {
+		t.Fatalf("expected 1 skill, got %d", len(refs))
+	}
+	if refs[0].Name != "demo-skill" {
+		t.Fatalf("expected demo-skill, got %q", refs[0].Name)
+	}
+	if !refs[0].IsManaged {
+		t.Fatalf("expected sibling marker to make symlinked skill managed")
+	}
+}
+
 func TestStandardAgentListSkillsSkipsHiddenAndBackupEntries(t *testing.T) {
 	skillsDir := t.TempDir()
 
