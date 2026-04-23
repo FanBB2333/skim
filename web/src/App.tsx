@@ -789,10 +789,8 @@ function Footer() {
             GitHub
           </a>
           <a
-            href="https://github.com/FanBB2333/skim/tree/main/docs"
+            href={`${import.meta.env.BASE_URL}docs/`}
             className="transition hover:text-foreground"
-            target="_blank"
-            rel="noreferrer"
           >
             Docs
           </a>

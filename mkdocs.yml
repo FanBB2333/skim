@@ -1,8 +1,15 @@
 site_name: Skim
 site_description: Skill Version Manager for AI Coding Assistants
-site_url: https://FanBB2333.github.io/skim/
+site_url: https://FanBB2333.github.io/skim/docs/
 repo_url: https://github.com/FanBB2333/skim
 repo_name: FanBB2333/skim
+
+# Keep dev-only material out of the published site. Gitignore-style patterns,
+# relative to docs/. Notably excludes the pptx build tree (node_modules) and the
+# superpowers/ planning notes.
+exclude_docs: |
+  slides/
+  superpowers/
 
 theme:
   name: material

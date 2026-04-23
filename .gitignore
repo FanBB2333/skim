@@ -41,6 +41,8 @@ Thumbs.db
 # Build output
 bin/
 dist/
+# Combined Pages artifact produced by local mkdocs + web/dist merge
+_site/
 
 # Project specific
 .qoder/
