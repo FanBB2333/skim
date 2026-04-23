@@ -1,0 +1,5 @@
+# build intermediates — commit the .pptx, not the rendered artefacts
+node_modules/
+package-lock.json
+skim-intro-zh.pdf
+slide-*.jpg
